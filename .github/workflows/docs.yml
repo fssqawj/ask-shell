@@ -43,10 +43,19 @@ jobs:
           git config user.name "GitHub Actions"
           git config user.email "actions@github.com"
 
-      - name: Deploy to GitHub Pages
+      - name: Build documentation
         if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
-          mkdocs gh-deploy --force
+          mkdocs build
+          touch site/.nojekyll
+
+      - name: Deploy to GitHub Pages
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
 
       - name: Build documentation (PR only)
         if: github.event_name == 'pull_request'
