@@ -61,71 +61,26 @@
 
 [中文](README_zh.md) | English
 
-## 📖 Overview
-
-Ask-Shell is an **AI-powered task automation agent** that goes beyond simple command generation. Unlike tools that only translate single queries into commands, Ask-Shell acts as an intelligent agent that can handle **multi-step tasks**, **learn from failures**, and **adapt its strategy** until your task is truly complete.
+Ask-Shell is an **AI-powered task automation agent** that goes beyond simple command generation. Unlike tools that only translate queries into commands, Ask-Shell **executes multi-step tasks**, **learns from failures**, and **adapts its strategy** until completion.
 
 ## 🎯 Why Ask-Shell?
 
-### **Task-Oriented, Not Command-Oriented**
-
 | Other Tools | Ask-Shell |
 |------------|-----------|
-| Generate ONE command → Done | Execute MULTIPLE steps → Analyze results → Adjust strategy → Complete task |
-| "Here's your command, you run it" | "I'll keep working until the task is finished" |
+| Generate ONE command → Done | Execute MULTIPLE steps → Analyze → Adjust → Complete |
+| "Here's your command, run it yourself" | "I'll keep working until it's done" |
 | Fails? You figure it out | Fails? AI analyzes, retries, finds alternatives |
-
-### **Core Advantages**
-
-#### 🔄 **Multi-Step Task Automation**
-Ask-Shell doesn't just generate a single command - it creates an **intelligent execution loop**:
-- Executes commands step-by-step
-- Analyzes execution results after each step
-- Dynamically adjusts strategy based on feedback
-- Continues until task completion
 
 **Example**: `"Organize my project files"`
 ```
 Other tools: ls -la  # Just one command, you do the rest
+
 Ask-Shell:  Step 1: Analyze directory structure
             Step 2: Create organized folders
             Step 3: Move files to appropriate locations
             Step 4: Verify organization
             ✓ Task complete!
 ```
-
-#### 🧠 **Intelligent Error Recovery**
-When commands fail, Ask-Shell:
-- **Analyzes** why the command failed
-- **Learns** from the error message
-- **Tries** alternative approaches
-- **Adapts** its strategy automatically
-
-No more copy-pasting error messages to ChatGPT - Ask-Shell handles it in real-time!
-
-#### 💭 **Real-Time Thinking Display**
-Watch AI think through your task:
-- See the reasoning process as it happens
-- Understand why each command is executed
-- Learn shell commands naturally
-- Build trust through transparency
-
-#### 🔒 **Smart Safety Protection**
-Dual-layer safety mechanism:
-- AI-powered dangerous operation detection
-- Built-in command blacklist protection
-- Interactive confirmation with command editing
-- Clear danger explanations
-
-### Key Features
-
-- 🤖 **Autonomous Task Agent** - Not just command generation, but complete task execution
-- 🔄 **Smart Retry Loop** - Automatically recovers from failures and tries alternatives
-- 💭 **Transparent AI Thinking** - Real-time display of AI's reasoning process
-- 🎨 **Beautiful Interface** - Rich terminal output with animations and syntax highlighting
-- 🔒 **Safety First** - Intelligent danger detection with user confirmation
-- 🎯 **Multiple Modes** - Single execution, interactive mode, and auto mode
-- 🧪 **Demo Mode** - Try it out without an API Key
 
 ## 🎬 Demo
 
