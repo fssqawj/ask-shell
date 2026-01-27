@@ -1,5 +1,9 @@
 # Ask-Shell
 
+[![PyPI version](https://img.shields.io/pypi/v/askshell-ai.svg)](https://pypi.org/project/askshell-ai/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+
 中文 | [English](README.md)
 
 用自然语言操控你的终端 - 让 AI 帮你生成并执行 Shell 命令
@@ -50,7 +54,13 @@ Ask-Shell 提供了美观的终端界面和实时反馈：
 
 ### 安装
 
-#### 方式一：开发模式安装（推荐）
+#### 方式一：从 PyPI 安装
+
+```bash
+pip install askshell-ai
+```
+
+#### 方式二：开发模式安装
 
 ```bash
 # 克隆仓库
@@ -61,7 +71,7 @@ cd ask-shell
 pip install -e .
 ```
 
-#### 方式二：直接安装依赖
+#### 方式三：直接安装依赖
 
 ```bash
 pip install -r requirements.txt
@@ -83,7 +93,7 @@ OPENAI_API_KEY=your-api-key-here
 
 ### 安装后使用（推荐）
 
-如果你使用 `pip install -e .` 安装，可以直接使用命令：
+如果你使用 `pip install askshell-ai` 或 `pip install -e .` 安装，可以直接使用命令：
 
 ```bash
 # 使用 ask-shell 命令
@@ -109,24 +119,24 @@ ask -w /path/to/dir "你的任务"
 
 ```bash
 # 单次执行任务
-python main.py "列出当前目录下的所有 Python 文件"
+python ask_shell/cli.py "列出当前目录下的所有 Python 文件"
 
 # 交互模式
-python main.py -i
+python ask_shell/cli.py -i
 
 # 演示模式（无需 API Key）
-python main.py -d "创建一个测试文件夹"
+python ask_shell/cli.py -d "创建一个测试文件夹"
 
 # 自动执行模式（不需要确认每条命令）
-python main.py -a "统计当前目录代码行数"
+python ask_shell/cli.py -a "统计当前目录代码行数"
 
 # 指定工作目录
-python main.py -w /path/to/dir "你的任务"
+python ask_shell/cli.py -w /path/to/dir "你的任务"
 ```
 
 ### 示例
 
-以下示例同时适用于 `ask` 命令和 `python main.py`：
+以下示例同时适用于 `ask` 命令和 `python ask_shell/cli.py`：
 
 ```bash
 # 文件操作
@@ -156,7 +166,7 @@ ask "用 Chrome 浏览器打开本地文件 index.html"
 ```bash
 ask -i
 # 或
-python main.py -i
+python ask_shell/cli.py -i
 ```
 
 进入交互模式后，可以持续输入任务：
@@ -172,11 +182,11 @@ Ask-Shell > exit  # 退出
 ask-shell/
 ├── ask_shell/           # 核心代码
 │   ├── agent.py        # 主要逻辑
+│   ├── cli.py          # 命令行入口
 │   ├── executor/       # 命令执行器
 │   ├── llm/            # LLM 客户端
 │   ├── models/         # 数据模型
 │   └── ui/             # 用户界面
-├── main.py             # 入口程序
 ├── requirements.txt    # 依赖列表
 └── .env.example        # 环境变量模板
 ```
