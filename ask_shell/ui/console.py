@@ -48,8 +48,8 @@ class ConsoleUI:
         """流式显示 AI 响应的各个字段"""
         from rich.live import Live
         from rich.panel import Panel
-        from rich.columns import Columns
         import json
+        import re
         
         # 创建一个可变的内容容器
         class StreamingContent:
@@ -60,64 +60,58 @@ class ConsoleUI:
                 self.explanation = ""
                 self.next_step = ""
                 self.error_analysis = ""
-                self.parsing = False
+                
+                # 记录每个字段当前已显示的长度
+                self.thinking_displayed = 0
+                self.command_displayed = 0
+                self.explanation_displayed = 0
+                self.next_step_displayed = 0
+                self.error_analysis_displayed = 0
             
             def add_token(self, token: str):
-                """添加新的 token 并尝试解析 JSON"""
+                """添加新的 token 并实时提取字段内容"""
                 self.buffer += token
-                
-                # 尝试解析 JSON
-                try:
-                    # 检查是否可能是完整的 JSON（以 { 开始）
-                    if self.buffer.strip().startswith('{'):
-                        data = json.loads(self.buffer)
-                        # 成功解析，更新各字段
-                        self.thinking = data.get('thinking', '')
-                        self.command = data.get('command', '')
-                        self.explanation = data.get('explanation', '')
-                        self.next_step = data.get('next_step', '')
-                        self.error_analysis = data.get('error_analysis', '')
-                        self.parsing = True
-                except json.JSONDecodeError:
-                    # JSON 还不完整，尝试提取部分内容
-                    self._partial_parse()
+                self._extract_fields()
             
-            def _partial_parse(self):
-                """部分解析 JSON，提取已经完整的字段"""
-                import re
-                
+            def _extract_fields(self):
+                """实时提取各个字段的内容（支持部分内容）"""
                 # 提取 thinking 字段
-                thinking_match = re.search(r'"thinking"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', self.buffer)
+                thinking_match = re.search(r'"thinking"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                 if thinking_match:
-                    self.thinking = thinking_match.group(1).replace('\\"', '"').replace('\\n', '\n')
-                
-                # 提取 command 字段
-                command_match = re.search(r'"command"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', self.buffer)
-                if command_match:
-                    self.command = command_match.group(1).replace('\\"', '"').replace('\\n', '\n')
-                
-                # 提取 explanation 字段
-                explanation_match = re.search(r'"explanation"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', self.buffer)
-                if explanation_match:
-                    self.explanation = explanation_match.group(1).replace('\\"', '"').replace('\\n', '\n')
-                
-                # 提取 next_step 字段
-                next_step_match = re.search(r'"next_step"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', self.buffer)
-                if next_step_match:
-                    self.next_step = next_step_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+                    raw_content = thinking_match.group(1)
+                    self.thinking = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
                 
                 # 提取 error_analysis 字段
-                error_match = re.search(r'"error_analysis"\s*:\s*"([^"]*(?:\\.[^"]*)*)"', self.buffer)
+                error_match = re.search(r'"error_analysis"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                 if error_match:
-                    self.error_analysis = error_match.group(1).replace('\\"', '"').replace('\\n', '\n')
+                    raw_content = error_match.group(1)
+                    self.error_analysis = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                
+                # 提取 command 字段
+                command_match = re.search(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                if command_match:
+                    raw_content = command_match.group(1)
+                    self.command = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                
+                # 提取 explanation 字段
+                explanation_match = re.search(r'"explanation"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                if explanation_match:
+                    raw_content = explanation_match.group(1)
+                    self.explanation = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                
+                # 提取 next_step 字段
+                next_step_match = re.search(r'"next_step"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                if next_step_match:
+                    raw_content = next_step_match.group(1)
+                    self.next_step = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
             
             def get_display(self):
-                """获取显示内容"""
+                """获取显示内容 - 只显示新增的内容"""
                 from rich.console import Group
                 
                 panels = []
                 
-                # 思考过程
+                # 思考过程 - 实时显示新增内容
                 if self.thinking:
                     panels.append(Panel(
                         f"💭 {self.thinking}",
@@ -135,7 +129,7 @@ class ConsoleUI:
                         padding=(1, 2)
                     ))
                 
-                # 生成的命令
+                # 生成的命令 - 实时显示
                 if self.command:
                     panels.append(Panel(
                         Syntax(self.command, "bash", theme="monokai", line_numbers=False),
@@ -144,11 +138,11 @@ class ConsoleUI:
                         padding=(0, 1)
                     ))
                 
-                # 说明
+                # 说明 - 实时显示
                 if self.explanation:
                     panels.append(f"[dim]💬 说明: {self.explanation}[/dim]")
                 
-                # 下一步
+                # 下一步 - 实时显示
                 if self.next_step:
                     panels.append(f"[cyan]📋 下一步: {self.next_step}[/cyan]")
                 
@@ -165,7 +159,7 @@ class ConsoleUI:
         
         content = StreamingContent()
         
-        with Live(content.get_display(), console=self.console, refresh_per_second=20) as live:
+        with Live(content.get_display(), console=self.console, refresh_per_second=30) as live:
             def update_callback(token: str):
                 content.add_token(token)
                 live.update(content.get_display())
