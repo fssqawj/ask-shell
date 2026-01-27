@@ -65,7 +65,8 @@ class AskShell:
             
             # 调用 LLM 生成下一步命令
             try:
-                response = self.llm.generate(task, context.last_result)
+                with self.ui.thinking_animation():
+                    response = self.llm.generate(task, context.last_result)
             except Exception as e:
                 self.ui.print_error(f"LLM 调用失败: {e}")
                 context.status = TaskStatus.FAILED
@@ -107,8 +108,8 @@ class AskShell:
                 command = action[5:]
             
             # 执行命令
-            self.ui.print_info(f"执行中: {command}")
-            result = self.executor.execute(command)
+            with self.ui.executing_animation(command):
+                result = self.executor.execute(command)
             context.add_result(result)
             
             # 显示执行结果
