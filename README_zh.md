@@ -2,6 +2,16 @@
 
 <p align="center">
   <img src="ask-shell-logo.jpg" alt="Ask-Shell Logo" width="600"/>
+  <br/>
+  <sub>Logo 由 Google Gemini 生成</sub>
+</p>
+
+<p align="center">
+  <strong><em>🚀 用自然语言驾驭终端，让 AI 为你施展命令魔法 ✨</em></strong>
+</p>
+
+<p align="center">
+  <strong>告别复杂语法记忆 - 只需说出你的想法，AI 立即为你执行！</strong>
 </p>
 
 [![PyPI version](https://img.shields.io/pypi/v/askshell-ai.svg)](https://pypi.org/project/askshell-ai/)
@@ -9,8 +19,6 @@
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
 
 中文 | [English](README.md)
-
-用自然语言操控你的终端 - 让 AI 帮你生成并执行 Shell 命令
 
 ## 📖 项目简介
 
