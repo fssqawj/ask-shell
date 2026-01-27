@@ -10,7 +10,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
     requirements = [line.strip() for line in fh if line.strip() and not line.startswith("#")]
 
 setup(
-    name="ask-shell",
+    name="askshell-ai",
     version="0.1.0",
     author="fssqawj",
     author_email="fssqawj@163.com",
@@ -37,8 +37,8 @@ setup(
     install_requires=requirements,
     entry_points={
         "console_scripts": [
-            "ask-shell=main:main",
-            "ask=main:main",
+            "ask-shell=ask_shell.cli:main",
+            "ask=ask_shell.cli:main",
         ],
     },
 )

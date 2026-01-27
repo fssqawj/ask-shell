@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=45", "wheel", "setuptools_scm[toml]>=6.2"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "askshell-ai"
+version = "0.1.0"
+description = "用自然语言操控你的终端 - 让 AI 帮你生成并执行 Shell 命令"
+authors = [
+    {name = "fssqawj", email = "fssqawj@163.com"}
+]
+readme = "README.md"
+requires-python = ">=3.7"
+license = {text = "MIT"}
+keywords = ["shell", "ai", "cli", "terminal", "natural-language"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.7",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Topic :: Software Development :: Libraries :: Python Modules",
+    "Topic :: System :: Shells",
+]
+dependencies = [
+    "openai>=1.0.0",
+    "rich>=13.0.0",
+    "python-dotenv>=1.0.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/fssqawj/ask-shell"
+Repository = "https://github.com/fssqawj/ask-shell"
+Issues = "https://github.com/fssqawj/ask-shell/issues"
+
+[project.scripts]
+ask-shell = "ask_shell.cli:main"
+ask = "ask_shell.cli:main"
+
+[tool.setuptools]
+packages = ["ask_shell", "ask_shell.executor", "ask_shell.llm", "ask_shell.models", "ask_shell.ui"]
