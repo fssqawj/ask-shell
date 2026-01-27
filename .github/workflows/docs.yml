@@ -4,16 +4,19 @@ on:
   push:
     branches:
       - main
-  pull_request:
-    branches:
-      - main
   workflow_dispatch:
 
 permissions:
   contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
 
 jobs:
-  deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -30,34 +33,31 @@ jobs:
         uses: actions/cache@v3
         with:
           path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
+          key: ${{ runner.os }}-pip-mkdocs
           restore-keys: |
             ${{ runner.os }}-pip-
 
-      - name: Install dependencies
+      - name: Install MkDocs
         run: |
           pip install mkdocs-material
 
-      - name: Configure Git
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-
       - name: Build documentation
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
         run: |
           mkdocs build
           touch site/.nojekyll
 
-      - name: Deploy to GitHub Pages
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-        uses: peaceiris/actions-gh-pages@v3
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v2
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./site
-          force_orphan: true
+          path: ./site
 
-      - name: Build documentation (PR only)
-        if: github.event_name == 'pull_request'
-        run: |
-          mkdocs build
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v2
