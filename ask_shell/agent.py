@@ -75,14 +75,16 @@ class AskShell:
             # 显示 LLM 响应（跳过所有字段，因为已经流式显示了）
             self.ui.print_response(response, skip_all=True)
             
-            # 检查任务是否完成
-            if response.is_complete:
+            # 获取要执行的命令
+            command = response.command.strip() if response.command else ""
+            
+            # 如果任务完成且没有命令需要执行，直接退出
+            if response.is_complete and not command:
                 context.status = TaskStatus.COMPLETED
                 self.ui.print_complete()
                 break
             
-            # 获取要执行的命令
-            command = response.command.strip() if response.command else ""
+            # 如果没有命令，跳过
             if not command:
                 self.ui.print_warning("没有生成命令，跳过...")
                 continue
@@ -118,6 +120,12 @@ class AskShell:
             # 如果有错误分析，在执行结果后显示
             if response.error_analysis:
                 self.ui.print_error_analysis(response.error_analysis)
+            
+            # 如果任务标记为完成，在执行完最后一条命令后退出
+            if response.is_complete:
+                context.status = TaskStatus.COMPLETED
+                self.ui.print_complete()
+                break
         
         return context
     
