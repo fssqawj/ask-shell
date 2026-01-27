@@ -21,6 +21,16 @@
 [![PyPI version](https://img.shields.io/pypi/v/askshell-ai.svg)](https://pypi.org/project/askshell-ai/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://fssqawj.github.io/ask-shell/)
+
+---
+
+<p align="center">
+  📖 <strong><a href="https://fssqawj.github.io/ask-shell/">完整文档</a></strong> | 
+  <a href="https://fssqawj.github.io/ask-shell/getting-started/quick-start/">快速开始</a> | 
+  <a href="https://fssqawj.github.io/ask-shell/user-guide/examples/">使用示例</a> | 
+  <a href="https://fssqawj.github.io/ask-shell/api/agent/">API 参考</a>
+</p>
 
 ---
 
