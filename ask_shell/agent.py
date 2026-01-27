@@ -114,6 +114,10 @@ class AskShell:
             
             # 显示执行结果
             self.ui.print_result(result)
+            
+            # 如果有错误分析，在执行结果后显示
+            if response.error_analysis:
+                self.ui.print_error_analysis(response.error_analysis)
         
         return context
     

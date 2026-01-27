@@ -120,15 +120,6 @@ class ConsoleUI:
                         padding=(1, 2)
                     ))
                 
-                # 错误分析
-                if self.error_analysis:
-                    panels.append(Panel(
-                        f"🔍 {self.error_analysis}",
-                        title="[bold yellow]⚠️  错误分析[/bold yellow]",
-                        border_style="yellow",
-                        padding=(1, 2)
-                    ))
-                
                 # 生成的命令 - 实时显示
                 if self.command:
                     panels.append(Panel(
@@ -198,15 +189,6 @@ class ConsoleUI:
                 padding=(1, 2)
             ))
         
-        # 错误分析
-        if response.error_analysis:
-            self.console.print(Panel(
-                f"🔍 {response.error_analysis}",
-                title="[bold yellow]⚠️  错误分析[/bold yellow]",
-                border_style="yellow",
-                padding=(1, 2)
-            ))
-        
         # 生成的命令 - 高亮显示
         if response.command:
             self.console.print(Panel(
@@ -221,6 +203,16 @@ class ConsoleUI:
         # 下一步计划
         if response.next_step:
             self.console.print(f"[cyan]📋 下一步: {response.next_step}[/cyan]")
+    
+    def print_error_analysis(self, error_analysis: str):
+        """打印错误分析（在执行结果之后）"""
+        if error_analysis:
+            self.console.print(Panel(
+                f"🔍 {error_analysis}",
+                title="[bold yellow]⚠️  错误分析[/bold yellow]",
+                border_style="yellow",
+                padding=(1, 2)
+            ))
     
     def print_result(self, result: ExecutionResult):
         """打印执行结果"""
