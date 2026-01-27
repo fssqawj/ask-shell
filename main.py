@@ -1,0 +1,79 @@
+#!/usr/bin/env python3
+"""Ask-Shell 主程序入口"""
+
+import argparse
+import sys
+from dotenv import load_dotenv
+
+from ask_shell import AskShell
+
+
+def main():
+    """主函数"""
+    load_dotenv()
+    
+    parser = argparse.ArgumentParser(
+        description="Ask-Shell - 用自然语言操控你的终端",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+示例:
+  %(prog)s "列出当前目录下的所有 Python 文件"
+  %(prog)s -i                    # 交互模式
+  %(prog)s -d "创建一个测试文件夹"  # 演示模式
+  %(prog)s -a "统计代码行数"       # 自动执行模式
+        """
+    )
+    
+    parser.add_argument(
+        "task",
+        nargs="?",
+        help="要执行的任务描述"
+    )
+    parser.add_argument(
+        "--auto", "-a",
+        action="store_true",
+        help="自动执行模式（不需要确认每条命令）"
+    )
+    parser.add_argument(
+        "--interactive", "-i",
+        action="store_true",
+        help="交互模式"
+    )
+    parser.add_argument(
+        "--demo", "-d",
+        action="store_true",
+        help="演示模式（不需要 API Key）"
+    )
+    parser.add_argument(
+        "--workdir", "-w",
+        type=str,
+        default=None,
+        help="工作目录"
+    )
+    
+    args = parser.parse_args()
+    
+    # 创建 Agent
+    try:
+        agent = AskShell(
+            auto_execute=args.auto,
+            demo_mode=args.demo,
+            working_dir=args.workdir
+        )
+    except Exception as e:
+        print(f"错误: 初始化失败 - {e}")
+        print("提示: 请确保已配置 OPENAI_API_KEY，或使用 --demo 模式")
+        sys.exit(1)
+    
+    # 运行
+    if args.interactive or not args.task:
+        agent.run_interactive()
+    else:
+        context = agent.run(args.task)
+        # 返回非零退出码如果任务失败
+        if context.status.value == "failed":
+            sys.exit(1)
+
+
+if __name__ == "__main__":
+    main()
