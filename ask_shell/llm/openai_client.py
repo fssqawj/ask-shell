@@ -42,11 +42,11 @@ class OpenAIClient(BaseLLMClient):
         """
         # 初始化系统消息
         if not self.messages:
-            self.messages.append(Message(role="system", content=self.SYSTEM_PROMPT))
+            self.messages.append(Message(role="system", content=self.system_prompt))
         
         # 构建用户消息
         if last_result:
-            content = self._build_result_message(last_result)
+            content = self._build_result_message(last_result, user_input)
         else:
             content = self._build_task_message(user_input)
         

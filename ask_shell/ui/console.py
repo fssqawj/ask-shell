@@ -60,6 +60,8 @@ class ConsoleUI:
                 self.explanation = ""
                 self.next_step = ""
                 self.error_analysis = ""
+                self.direct_response = ""
+                self.needs_llm_processing = False
                 
                 # 记录每个字段当前已显示的长度
                 self.thinking_displayed = 0
@@ -67,6 +69,7 @@ class ConsoleUI:
                 self.explanation_displayed = 0
                 self.next_step_displayed = 0
                 self.error_analysis_displayed = 0
+                self.direct_response_displayed = 0
             
             def add_token(self, token: str):
                 """添加新的 token 并实时提取字段内容"""
@@ -104,6 +107,17 @@ class ConsoleUI:
                 if next_step_match:
                     raw_content = next_step_match.group(1)
                     self.next_step = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                
+                # 提取 direct_response 字段
+                direct_response_match = re.search(r'"direct_response"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                if direct_response_match:
+                    raw_content = direct_response_match.group(1)
+                    self.direct_response = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                
+                # 提取 needs_llm_processing 字段
+                needs_llm_match = re.search(r'"needs_llm_processing"\s*:\s*(true|false)', self.buffer)
+                if needs_llm_match:
+                    self.needs_llm_processing = needs_llm_match.group(1) == 'true'
             
             def get_display(self):
                 """获取显示内容 - 只显示新增的内容"""
@@ -117,6 +131,15 @@ class ConsoleUI:
                         f"💭 {self.thinking}",
                         title="[bold blue]💡 思考过程[/bold blue]",
                         border_style="blue",
+                        padding=(1, 2)
+                    ))
+                
+                # 直接响应 - 用于直接LLM模式
+                if self.direct_response:
+                    panels.append(Panel(
+                        self.direct_response,
+                        title="[bold cyan]💡 AI 响应[/bold cyan]",
+                        border_style="cyan",
                         padding=(1, 2)
                     ))
                 
@@ -204,6 +227,17 @@ class ConsoleUI:
         if response.next_step:
             self.console.print(f"[cyan]📋 下一步: {response.next_step}[/cyan]")
     
+    def print_skill_response(self, response, skip_all: bool = False):
+        """
+        打印技能响应（兼容SkillResponse和LLMResponse）
+        
+        Args:
+            response: SkillResponse或LLMResponse对象
+            skip_all: 是否跳过所有显示
+        """
+        # 技能响应和LLM响应结构兼容，直接调用print_response
+        self.print_response(response, skip_all)
+    
     def print_error_analysis(self, error_analysis: str):
         """打印错误分析（在执行结果之后）"""
         if error_analysis:
@@ -211,6 +245,18 @@ class ConsoleUI:
                 f"🔍 {error_analysis}",
                 title="[bold yellow]⚠️  错误分析[/bold yellow]",
                 border_style="yellow",
+                padding=(1, 2)
+            ))
+    
+    def print_direct_response(self, direct_response: str):
+        """打印直接LLM响应（用于翻译、总结、分析等任务）"""
+        if direct_response:
+            # 使用 Markdown 渲染以支持格式化
+            md = Markdown(direct_response)
+            self.console.print(Panel(
+                md,
+                title="[bold cyan]💡 AI 响应[/bold cyan]",
+                border_style="cyan",
                 padding=(1, 2)
             ))
     
@@ -299,3 +345,67 @@ class ConsoleUI:
         table.add_row("状态", context.status.value)
         
         self.console.print(table)
+    
+    @contextmanager
+    def skill_selection_animation(self):
+        """显示技能选择中的动画"""
+        with self.console.status("[bold magenta]🎯 正在分析任务并选择技能...[/bold magenta]", spinner="dots") as status:
+            yield status
+    
+    def print_skill_selected(self, skill_name: str, confidence: float, reasoning: str, capabilities: list):
+        """
+        打印技能选择结果（使用 Rich 美化）
+        
+        Args:
+            skill_name: 选中的技能名称
+            confidence: 置信度
+            reasoning: 选择理由
+            capabilities: 技能能力列表
+        """
+        from rich.table import Table
+        from rich.console import Group
+        
+        # 创建技能信息表格
+        skill_table = Table(show_header=False, box=None, padding=(0, 1))
+        skill_table.add_column("Label", style="dim")
+        skill_table.add_column("Value")
+        
+        # 添加技能信息
+        skill_table.add_row("技能", f"[bold cyan]{skill_name}[/bold cyan]")
+        
+        # 置信度显示（带颜色）
+        if confidence >= 0.9:
+            confidence_str = f"[bold green]{confidence:.0%}[/bold green]"
+        elif confidence >= 0.7:
+            confidence_str = f"[bold yellow]{confidence:.0%}[/bold yellow]"
+        else:
+            confidence_str = f"[bold red]{confidence:.0%}[/bold red]"
+        skill_table.add_row("置信度", confidence_str)
+        
+        # 能力列表
+        capabilities_str = ", ".join([f"[dim]{c}[/dim]" for c in capabilities])
+        skill_table.add_row("能力", capabilities_str)
+        
+        # 创建理由面板
+        reasoning_panel = Panel(
+            f"[italic]{reasoning}[/italic]",
+            title="[bold]💭 选择理由[/bold]",
+            border_style="dim",
+            padding=(0, 2)
+        )
+        
+        # 组合显示
+        content = Group(
+            skill_table,
+            "",
+            reasoning_panel
+        )
+        
+        # 使用 Panel 包装整体
+        self.console.print(Panel(
+            content,
+            title="[bold magenta]🎯 技能选择结果[/bold magenta]",
+            border_style="magenta",
+            padding=(1, 2)
+        ))
+
