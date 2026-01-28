@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "askshell-ai"
-version = "0.1.0"
+version = "0.2.0"
 description = "用自然语言操控你的终端 - 让 AI 帮你生成并执行 Shell 命令"
 authors = [
     {name = "fssqawj", email = "fssqawj@163.com"}

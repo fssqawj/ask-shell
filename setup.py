@@ -11,7 +11,7 @@ with open("requirements.txt", "r", encoding="utf-8") as fh:
 
 setup(
     name="askshell-ai",
-    version="0.1.0",
+    version="0.2.0",
     author="fssqawj",
     author_email="fssqawj@163.com",
     description="用自然语言操控你的终端 - 让 AI 帮你生成并执行 Shell 命令",
