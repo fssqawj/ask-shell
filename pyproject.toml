@@ -44,4 +44,4 @@ ask-shell = "ask_shell.cli:main"
 ask = "ask_shell.cli:main"
 
 [tool.setuptools]
-packages = ["ask_shell", "ask_shell.executor", "ask_shell.llm", "ask_shell.models", "ask_shell.ui"]
+packages = ["ask_shell", "ask_shell.executor", "ask_shell.llm", "ask_shell.models", "ask_shell.ui", "ask_shell.skills"]
