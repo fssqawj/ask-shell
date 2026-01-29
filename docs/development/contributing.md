@@ -415,9 +415,9 @@ Maintainers follow this process for releases:
 
 1. Update version in `pyproject.toml`
 2. Update CHANGELOG.md
-3. Create release branch: `git checkout -b release/v0.2.0`
-4. Tag release: `git tag v0.2.0`
-5. Push: `git push origin v0.2.0`
+3. Create release branch: `git checkout -b release/v0.3.0`
+4. Tag release: `git tag v0.3.0`
+5. Push: `git push origin v0.3.0`
 6. Create GitHub release
 7. Publish to PyPI: `python -m build && twine upload dist/*`
 

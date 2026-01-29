@@ -2,7 +2,7 @@
 
 Future plans and features for Ask-Shell.
 
-## Version 0.2.0 (Q1 2026)
+## Version 0.3.0 (Q1 2026)
 
 ### Multi-LLM Support
 
