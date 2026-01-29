@@ -10,6 +10,7 @@ from .skill_selector import SkillSelector
 from .llm_skill import LLMSkill
 from .ppt_skill import PPTSkill
 from .image_skill import ImageSkill
+from .browser_skill import BrowserSkill
 
 __all__ = [
     'BaseSkill', 
@@ -19,5 +20,6 @@ __all__ = [
     'SkillSelector',
     'LLMSkill',
     'PPTSkill',
-    'ImageSkill'
+    'ImageSkill',
+    'BrowserSkill'
 ]

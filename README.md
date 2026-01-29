@@ -276,6 +276,8 @@ ask-shell/
 | **Execution loop** | ❌ Single-shot | ❌ Chat only | ⚠️ Limited | ✅ **Until completion** |
 | **Error analysis** | ❌ Manual | ❌ Manual | ⚠️ Basic | ✅ **Automatic** |
 | **Dangerous operation detection** | ⚠️ Basic | ⚠️ Basic | ✅ Yes | ✅ **Dual-layer** |
+| **Browser automation** | ❌ | ❌ | ❌ | ✅ **Built-in** |
+| **File generation** | ❌ | ❌ | ❌ | ✅ **PPT, Images, etc.** |
 | **Open source** | ✅ Python | ✅ Rust | ❌ Closed | ✅ **Python** |
 | **Easy to extend** | ⚠️ | ⚠️ | ❌ | ✅ **Plugin-ready** |
 
@@ -285,6 +287,12 @@ ask-shell/
 **Aichat**: Powerful chat interface with many features, but not task-focused.  
 **Warp Terminal**: Modern terminal with AI features, but closed-source and requires full terminal replacement.  
 **Ask-Shell**: ✨ **Focused on autonomous task completion** - keeps executing until your task is actually done.
+
+### Advanced Capabilities
+
+**Browser Automation**: Built-in Playwright integration for web automation tasks.
+**File Generation**: Generate PPTs, images, and other files directly from natural language.
+**Extensible Skills**: Plugin-ready architecture for adding new capabilities.
 
 ## ⚙️ Configuration Options
 

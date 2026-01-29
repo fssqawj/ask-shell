@@ -122,15 +122,55 @@ class SkillSelector:
             return "无执行历史"
         
         iteration = context.get('iteration', 0)
-        has_history = len(context.get('history', [])) > 0
+        history = context.get('history', [])
         last_result = context.get('last_result')
         
         desc = f"- 当前步骤: 第{iteration}步\n"
         
+        # 添加历史信息
+        if history:
+            desc += f"- 历史步骤数: {len(history)}\n"
+            desc += "- 历史执行记录:\n"
+            for i, hist_item in enumerate(history[-3:], 1):  # 只显示最近3个历史记录
+                # 检查hist_item是ExecutionResult对象还是字典
+                if hasattr(hist_item, 'command'):  # ExecutionResult对象
+                    skill_name = getattr(hist_item, 'skill', 'Unknown')
+                    command = getattr(hist_item, 'command', '')[:100]  # 只取前100个字符
+                    success = '成功' if hist_item.success else '失败'
+                elif isinstance(hist_item, dict):  # 字典格式
+                    skill_name = hist_item.get('skill', 'Unknown')
+                    command = hist_item.get('command', '')[:100]  # 只取前100个字符
+                    success = hist_item.get('success', 'Unknown')
+                else:  # 其他情况
+                    skill_name = 'Unknown'
+                    command = str(hist_item)[:100]
+                    success = 'Unknown'
+                desc += f"  {i}. [{skill_name}] {command} ({success})\n"
+        else:
+            desc += "- 历史执行记录: 无\n"
+        
+        # 添加上一步结果信息
         if last_result:
-            status = "成功" if last_result.success else "失败"
+            # 检查last_result是ExecutionResult对象还是字典
+            if hasattr(last_result, 'success'):  # ExecutionResult对象
+                status = "成功" if last_result.success else "失败"
+                command = getattr(last_result, 'command', '')
+                output = getattr(last_result, 'output', str(getattr(last_result, 'stdout', '')))
+            elif isinstance(last_result, dict):  # 字典格式
+                status = "成功" if last_result.get('returncode', 0) == 0 else "失败"
+                command = last_result.get('command', '')
+                output = last_result.get('output', str(last_result.get('stdout', '')))
+            else:  # 其他情况
+                status = "未知"
+                command = str(last_result)
+                output = str(last_result)
+            
             desc += f"- 上一步结果: {status}\n"
-            desc += f"- 上一条命令: {last_result.command}\n"
+            desc += f"- 上一条命令: {command[:200] if command else ''}\n"
+            if output:
+                # 添加输出摘要
+                output_summary = output[:100] + "..." if len(str(output)) > 100 else str(output)
+                desc += f"- 输出摘要: {output_summary}\n"
         else:
             desc += "- 上一步结果: 无（这是第一步）\n"
         

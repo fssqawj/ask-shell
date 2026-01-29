@@ -7,6 +7,7 @@ Ask-Shell can be installed in multiple ways. Choose the method that best fits yo
 - Python 3.7 or higher
 - pip (Python package installer)
 - OpenAI API Key (or compatible API endpoint)
+- For browser automation: Chrome or Chromium browser installed on your system
 
 ## Installation Methods
 
@@ -107,5 +108,6 @@ pip install askshell-ai
 If you get import errors:
 
 1. Make sure all dependencies are installed: `pip install -r requirements.txt`
-2. Check your Python version: `python --version` (should be 3.7+)
-3. Try creating a fresh virtual environment
+2. For browser automation, install Playwright: `playwright install chromium`
+3. Check your Python version: `python --version` (should be 3.7+)
+4. Try creating a fresh virtual environment

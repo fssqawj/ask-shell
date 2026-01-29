@@ -57,12 +57,13 @@ The agent follows this execution loop:
 ```
 1. Receive task
 2. Analyze and plan
-3. Generate command
-4. Safety check
-5. Get user confirmation (unless auto mode)
-6. Execute command
-7. Analyze results
-8. Determine if task complete
+3. Select appropriate skill (LLM, Browser, PPT, Image, etc.)
+4. Execute skill
+5. Safety check (if command-generating skill)
+6. Get user confirmation (unless auto mode)
+7. Execute command (if applicable)
+8. Analyze results
+9. Determine if task complete
    - If not complete: goto step 3 with updated context
    - If complete: finish
 ```
@@ -73,6 +74,12 @@ The agent follows this execution loop:
 
 ```
 TaskAgent
+  ├─> SkillManager (select and execute appropriate skills)
+  │   ├─> LLMSkill (command generation, translation, analysis)
+  │   ├─> BrowserSkill (web automation with Playwright)
+  │   ├─> PPTSkill (presentation generation)
+  │   ├─> ImageSkill (image generation)
+  │   └─> Other skills...
   ├─> LLMClient (generate commands and analyze)
   ├─> ShellExecutor (execute and validate)
   └─> Console (user interaction and display)

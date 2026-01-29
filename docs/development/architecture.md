@@ -4,41 +4,51 @@ Understanding Ask-Shell's design and architecture.
 
 ## High-Level Overview
 
-Ask-Shell follows a modular, layered architecture:
+Ask-Shell follows a modular, layered architecture with a flexible skill system:
 
 ```
-┌─────────────────────────────────────────┐
-│            CLI Interface                │
-│         (ask_shell/cli.py)              │
-└──────────────────┬──────────────────────┘
+┌─────────────────────────────────────────────────┐
+│              CLI Interface                      │
+│           (ask_shell/cli.py)                    │
+└──────────────────┬──────────────────────────────┘
                    │
-┌──────────────────▼──────────────────────┐
-│          Task Agent Layer               │
-│        (ask_shell/agent.py)             │
-│  ┌────────────────────────────────┐     │
-│  │  Task Execution Loop           │     │
-│  │  - Analyze task                │     │
-│  │  - Generate commands           │     │
-│  │  - Handle errors               │     │
-│  │  - Manage context              │     │
-│  └────────────────────────────────┘     │
-└───────┬─────────────────────┬───────────┘
-        │                     │
-┌───────▼──────────┐  ┌──────▼────────────┐
-│   LLM Client     │  │  Shell Executor   │
-│  (llm/*.py)      │  │ (executor/*.py)   │
-│  - OpenAI API    │  │  - Command exec   │
-│  - Streaming     │  │  - Safety check   │
-│  - Context mgmt  │  │  - Result parse   │
-└──────────────────┘  └───────────────────┘
-        │                     │
-        │         ┌───────────▼───────────┐
-        │         │   UI Components       │
-        └────────▶│   (ui/console.py)     │
-                  │  - Rich display       │
-                  │  - User prompts       │
-                  │  - Progress animation │
-                  └───────────────────────┘
+┌──────────────────▼──────────────────────────────┐
+│              Task Agent Layer                   │
+│            (ask_shell/agent.py)                 │
+│  ┌─────────────────────────────────────────┐    │
+│  │  Task Execution Loop                    │    │
+│  │  - Analyze task                         │    │
+│  │  - Select appropriate skill             │    │
+│  │  - Generate commands/responses          │    │
+│  │  - Handle errors                        │    │
+│  │  - Manage context                       │    │
+│  └─────────────────────────────────────────┘    │
+└─────────┬─────────────────────┬─────────────────┘
+          │                     │
+    ┌─────▼─────┐        ┌──────▼─────────────────┐
+    │ Skill     │        │  Core Components       │
+    │ System    │        │                        │
+    │           │        │  ┌───────────────────┐ │
+    │  ┌────────▼───┐    │  │  LLM Client       │ │
+    │  │ LLMSkill   │    │  │  (llm/*.py)       │ │
+    │  │ PPTSkill   │    │  │  - OpenAI API     │ │
+    │  │ ImageSkill │────┼─▶│  - Streaming      │ │
+    │  │ BrowserSkill│   │  │  - Context mgmt   │ │
+    │  │ ...        │    │  └───────────────────┘ │
+    │  └────────────┘    │  ┌───────────────────┐ │
+    └────────────────────┼─▶│  Shell Executor   │ │
+                         │  │ (executor/*.py) │ │
+                         │  │  - Command exec   │ │
+                         │  │  - Safety check   │ │
+                         │  │  - Result parse   │ │
+                         │  └───────────────────┘ │
+                         │  ┌───────────────────┐ │
+                         └─▶│  UI Components    │ │
+                            │   (ui/console.py) │ │
+                            │  - Rich display   │ │
+                            │  - User prompts   │ │
+                            │  - Progress anim  │ │
+                            └───────────────────┘
 ```
 
 ## Core Components

@@ -5,7 +5,7 @@ from typing import Optional
 from .models.types import TaskContext, TaskStatus, ExecutionResult
 from .executor.shell import ShellExecutor
 from .ui.console import ConsoleUI
-from .skills import SkillManager, LLMSkill, PPTSkill, ImageSkill
+from .skills import SkillManager, LLMSkill, PPTSkill, ImageSkill, BrowserSkill
 
 
 class AskShell:
@@ -58,6 +58,10 @@ class AskShell:
         # 注册图片生成技能
         image_skill = ImageSkill()
         self.skill_manager.register_skill(image_skill)
+        
+        # 注册浏览器自动化技能
+        browser_skill = BrowserSkill()
+        self.skill_manager.register_skill(browser_skill)
         
         # 这里可以继续注册更多技能
         # video_skill = VideoSkill()
@@ -185,10 +189,12 @@ class AskShell:
             if response.error_analysis:
                 self.ui.print_error_analysis(response.error_analysis)
             
-            # 如果任务标记为完成，在执行完最后一条命令后退出
+                # 如果任务标记为完成，在执行完最后一条命令后退出
             if response.is_complete:
                 context.status = TaskStatus.COMPLETED
                 self.ui.print_complete()
+                # 任务完成后清理技能状态，特别是浏览器技能
+                self.skill_manager.reset_all()
                 break
         
         return context
@@ -244,5 +250,7 @@ class AskShell:
                     # 可选：显示任务摘要
                     # self.ui.print_summary(context)
             except KeyboardInterrupt:
+                # 用户中断时清理技能状态
+                self.skill_manager.reset_all()
                 self.ui.console.print("\n[yellow]再见![/yellow]")
                 break

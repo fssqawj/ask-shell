@@ -54,12 +54,13 @@ class LLMSkill(BaseSkill):
         if context is None:
             context = {}
         
-        # Get last execution result from context
+        # Get execution context from context
         last_result = context.get('last_result')
+        history = context.get('history', [])
         
         # Call LLM to generate response
         try:
-            llm_response = self.llm.generate(task, last_result, stream_callback)
+            llm_response = self.llm.generate(task, last_result, stream_callback, history=history)
             
             # Convert LLMResponse to SkillResponse
             return SkillResponse(

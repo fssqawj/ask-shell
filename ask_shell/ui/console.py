@@ -160,10 +160,19 @@ class ConsoleUI:
                 if self.next_step:
                     panels.append(f"[cyan]📋 下一步: {self.next_step}[/cyan]")
                 
-                # 如果什么都没有，显示思考中
+                # 如果什么都没有，显示思考中（带浏览器提示）
                 if not panels:
+                    # 检测是否是浏览器相关任务（根据buffer内容判断）
+                    is_browser_task = any(keyword in self.buffer.lower() for keyword in 
+                                         ['playwright', 'browser', 'chromium', '浏览器', 'goto', 'page.'])
+                    
+                    if is_browser_task:
+                        loading_text = "🌐 正在生成浏览器自动化代码..."
+                    else:
+                        loading_text = "💭 思考中..."
+                    
                     panels.append(Panel(
-                        "💭 思考中...",
+                        loading_text,
                         title="[bold blue]💡 思考过程[/bold blue]",
                         border_style="blue",
                         padding=(1, 2)
@@ -350,6 +359,12 @@ class ConsoleUI:
     def skill_selection_animation(self):
         """显示技能选择中的动画"""
         with self.console.status("[bold magenta]🎯 正在分析任务并选择技能...[/bold magenta]", spinner="dots") as status:
+            yield status
+    
+    @contextmanager
+    def browser_code_generation_animation(self):
+        """显示浏览器代码生成中的动画"""
+        with self.console.status("[bold cyan]🌐 正在生成浏览器自动化代码...[/bold cyan]", spinner="dots") as status:
             yield status
     
     def print_skill_selected(self, skill_name: str, confidence: float, reasoning: str, capabilities: list):

@@ -1,6 +1,14 @@
-# Advanced Features
+## Advanced Features
 
 Unlock the full potential of Ask-Shell with these advanced features.
+
+Ask-Shell's architecture is built around a flexible skill system that enables various types of task execution:
+
+- **LLM Skill**: Traditional command generation and text processing
+- **Browser Skill**: Web automation using Playwright
+- **PPT Skill**: Presentation generation from natural language
+- **Image Skill**: Image generation capabilities
+- **Extensible Skills**: Plugin-ready architecture for adding new capabilities
 
 ## Multi-Step Task Execution
 

@@ -112,18 +112,8 @@ class BaseLLMClient(ABC):
         """
         status = "成功" if result.success else "失败"
         
-        # 检测任务是否可能需要LLM处理内容
-        task_lower = task.lower()
-        needs_more_content = any(keyword in task_lower for keyword in [
-            "翻译", "translate", "总结", "summarize", "summary",
-            "分析", "analyze", "analysis", "解释", "explain"
-        ])
-        
-        # 根据任务类型选择合适的输出长度
-        if needs_more_content:
-            output = result.get_output_for_llm()  # 更多内容 (10000字符)
-        else:
-            output = result.truncated_output()  # 常规截断 (2000字符)
+        # 总是使用完整输出以提供最多信息给LLM
+        output = result.get_output_for_llm()  # 使用完整内容
         
         return f"""上一条命令执行{status}：
 命令: {result.command}
@@ -138,7 +128,7 @@ class BaseLLMClient(ABC):
         return f"请帮我完成以下任务: {task}"
     
     @abstractmethod
-    def generate(self, user_input: str, last_result: Optional[ExecutionResult] = None, stream_callback: Optional[Callable[[str], None]] = None) -> LLMResponse:
+    def generate(self, user_input: str, last_result: Optional[ExecutionResult] = None, stream_callback: Optional[Callable[[str], None]] = None, history: Optional[List[ExecutionResult]] = None) -> LLMResponse:
         """
         生成下一步命令
         

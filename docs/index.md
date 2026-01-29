@@ -52,6 +52,9 @@ Ask-Shell is an **AI-powered task automation agent** that goes beyond simple com
 - 🔒 **Safety First** - Intelligent danger detection with user confirmation
 - 🎯 **Multiple Modes** - Single execution, interactive mode, and auto mode
 - 🧪 **Demo Mode** - Try it out without an API Key
+- 🌐 **Browser Automation** - Built-in Playwright integration for web tasks
+- 📊 **File Generation** - Create PPTs, images and other files from natural language
+- 🔌 **Extensible Skills** - Plugin-ready architecture for adding new capabilities
 
 ## Quick Links
 

@@ -230,7 +230,48 @@ Step 6: Push
 ✓ Changes committed and pushed!
 ```
 
-## Browser Integration
+## Skill-Based Capabilities
+
+Ask-Shell leverages a variety of skills to handle different types of tasks:
+
+### LLM Skill
+
+Handles traditional command generation, translation, summarization, and text processing tasks.
+
+```bash
+ask "translate this paragraph to French"
+ask "summarize the content of this document"
+ask "explain how this Python code works"
+```
+
+### Browser Integration
+
+Control web browsers using natural language with Playwright automation.
+
+```bash
+ask "open GitHub in my browser"
+ask "search Google for Python tutorials"
+ask "extract product prices from this e-commerce website"
+ask "take a screenshot of the current webpage"
+```
+
+### PPT Generation
+
+Create presentations from natural language descriptions.
+
+```bash
+ask "create a presentation about climate change with 5 slides"
+ask "make a PowerPoint about our quarterly results"
+```
+
+### Image Generation
+
+Generate images based on text descriptions.
+
+```bash
+ask "create an image of a futuristic cityscape"
+ask "generate a logo for a tech startup"
+```
 
 ### Open Websites
 
