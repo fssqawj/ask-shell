@@ -12,6 +12,8 @@ from .direct_llm_skill import DirectLLMSkill
 from .ppt_skill import PPTSkill
 from .image_skill import ImageSkill
 from .browser_skill import BrowserSkill
+from .wechat_skill import WeChatSkill
+from .feishu_skill import FeishuSkill
 
 __all__ = [
     'BaseSkill', 

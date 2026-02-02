@@ -1,0 +1,456 @@
+"""Web Server for Ask-Shell UI"""
+
+import asyncio
+import json
+import threading
+import re
+from typing import Dict, List
+from flask import Flask, render_template, request, jsonify
+from flask_socketio import SocketIO, emit
+import os
+
+from ..agent import AskShell
+from ..ui.console import ConsoleUI
+from rich.panel import Panel
+from rich.syntax import Syntax
+
+
+class WebUI:
+    """Web-based UI for Ask-Shell"""
+    
+    def __init__(self, app, socketio):
+        self.app = app
+        self.socketio = socketio
+        self.active_sessions: Dict[str, AskShell] = {}
+        self.session_outputs: Dict[str, List[str]] = {}
+        
+        self._setup_routes()
+        self._setup_socket_handlers()
+    
+    def _setup_routes(self):
+        """Setup Flask routes"""
+        @self.app.route('/')
+        def index():
+            return render_template('index.html')
+        
+        @self.app.route('/api/run', methods=['POST'])
+        def run_task():
+            task = request.json.get('task', '')
+            if not task:
+                return jsonify({'error': 'Task is required'}), 400
+            
+            # Create a new session for this task
+            session_id = request.json.get('session_id', 'default')
+            
+            # Initialize agent for this session
+            if session_id not in self.active_sessions:
+                self.active_sessions[session_id] = AskShell(auto_execute=True)
+                self.session_outputs[session_id] = []
+            
+            # Run the task in a separate thread to allow async updates
+            def run_in_thread():
+                agent = self.active_sessions[session_id]
+                
+                # Override the UI to send updates via WebSocket
+                original_ui = agent.ui
+                web_ui_wrapper = self._create_web_ui_wrapper(agent.ui, session_id)
+                agent.ui = web_ui_wrapper
+                
+                # Also update the UI reference in the skill manager
+                original_skill_manager_ui = agent.skill_manager.ui
+                agent.skill_manager.ui = web_ui_wrapper
+                
+                try:
+                    context = agent.run(task)
+                    self.socketio.emit('task_complete', {
+                        'session_id': session_id,
+                        'status': context.status.value,
+                        'summary': {
+                            'iterations': context.iteration,
+                            'success_count': sum(1 for r in context.history if r.success),
+                            'failure_count': sum(1 for r in context.history if not r.success)
+                        }
+                    }, room=session_id)
+                except Exception as e:
+                    self.socketio.emit('error', {
+                        'session_id': session_id,
+                        'message': str(e)
+                    }, room=session_id)
+                finally:
+                    # Restore original UI
+                    agent.ui = original_ui
+                    agent.skill_manager.ui = original_skill_manager_ui
+            
+            thread = threading.Thread(target=run_in_thread)
+            thread.daemon = True
+            thread.start()
+            
+            return jsonify({'status': 'started', 'session_id': session_id})
+    
+    def _setup_socket_handlers(self):
+        """Setup Socket.IO event handlers"""
+        @self.socketio.on('connect')
+        def handle_connect():
+            print(f'Client connected: {request.sid}')
+        
+        @self.socketio.on('disconnect')
+        def handle_disconnect():
+            print(f'Client disconnected: {request.sid}')
+        
+        @self.socketio.on('run_task_request')
+        def handle_run_task_request(data):
+            task = data.get('task', '')
+            session_id = data.get('session_id', request.sid)
+            
+            print(f"DEBUG: Received run_task_request for session {session_id}, data keys: {list(data.keys())}")
+            
+            if not task:
+                emit('error', {'session_id': session_id, 'message': 'Task is required'}, room=session_id)
+                return
+            
+            # Initialize agent for this session if not exists
+            if session_id not in self.active_sessions:
+                self.active_sessions[session_id] = AskShell(auto_execute=True)
+                self.session_outputs[session_id] = []
+            
+            # Run the task in a separate thread to allow async updates
+            def run_in_thread():
+                agent = self.active_sessions[session_id]
+                
+                # Override the UI to send updates via WebSocket
+                original_ui = agent.ui
+                web_ui_wrapper = self._create_web_ui_wrapper(agent.ui, session_id)
+                agent.ui = web_ui_wrapper
+                
+                # Also update the UI reference in the skill manager
+                original_skill_manager_ui = agent.skill_manager.ui
+                agent.skill_manager.ui = web_ui_wrapper
+                
+                print(f"DEBUG: Starting agent run for session {session_id}")
+                try:
+                    context = agent.run(task)
+                    print(f"DEBUG: Task completed for session {session_id}")
+                    self.socketio.emit('task_complete', {
+                        'session_id': session_id,
+                        'status': context.status.value,
+                        'summary': {
+                            'iterations': context.iteration,
+                            'success_count': sum(1 for r in context.history if r.success),
+                            'failure_count': sum(1 for r in context.history if not r.success)
+                        }
+                    }, room=session_id)
+                except Exception as e:
+                    print(f"DEBUG: Error in agent run for session {session_id}: {e}")
+                    self.socketio.emit('error', {
+                        'session_id': session_id,
+                        'message': str(e)
+                    }, room=session_id)
+                finally:
+                    # Restore original UI
+                    agent.ui = original_ui
+                    agent.skill_manager.ui = original_skill_manager_ui
+            
+            thread = threading.Thread(target=run_in_thread)
+            thread.daemon = True
+            thread.start()
+    
+    def _create_web_ui_wrapper(self, console_ui: ConsoleUI, session_id: str):
+        """Create a wrapper around ConsoleUI to emit events to web"""
+        class WebUIWrapper:
+            def __init__(self, console_ui, session_id, socketio):
+                self.console_ui = console_ui
+                self.session_id = session_id
+                self.socketio = socketio
+            
+            def _emit_event(self, event_type: str, data: dict):
+                """Emit event to the specific session"""
+                # Add session info to data
+                data['session_id'] = self.session_id
+                # Debug logging
+                print(f"DEBUG: Emitting event {event_type} to session {self.session_id}")
+                # Emit to the default namespace - SocketIO should broadcast to all connected clients
+                # The client JS will filter based on session_id if needed
+                self.socketio.emit(event_type, data)
+            
+            def print_welcome(self):
+                self.console_ui.print_welcome()
+                self._emit_event('welcome', {})
+            
+            def print_task(self, task: str):
+                self.console_ui.print_task(task)
+                self._emit_event('task_received', {'task': task})
+            
+            def print_step(self, step: int):
+                self.console_ui.print_step(step)
+                self._emit_event('step_started', {'step': step})
+            
+            def print_response(self, response, skip_all: bool = False):
+                self.console_ui.print_response(response, skip_all)
+                # Emit response details
+                response_data = {
+                    'thinking': getattr(response, 'thinking', ''),
+                    'command': getattr(response, 'command', ''),
+                    'explanation': getattr(response, 'explanation', ''),
+                    'next_step': getattr(response, 'next_step', ''),
+                    'direct_response': getattr(response, 'direct_response', ''),
+                    'is_dangerous': getattr(response, 'is_dangerous', False),
+                    'danger_reason': getattr(response, 'danger_reason', ''),
+                    'error_analysis': getattr(response, 'error_analysis', ''),
+                    'skill_name': getattr(response, 'skill_name', 'unknown'),
+                    'select_reason': getattr(response, 'select_reason', '')
+                }
+                self._emit_event('response_generated', response_data)
+            
+            def print_skill_response(self, response, skip_all: bool = False):
+                self.print_response(response, skip_all)
+            
+            def print_error_analysis(self, error_analysis: str):
+                self.console_ui.print_error_analysis(error_analysis)
+                self._emit_event('error_analysis', {'analysis': error_analysis})
+            
+            def print_direct_response(self, direct_response: str):
+                self.console_ui.print_direct_response(direct_response)
+                self._emit_event('direct_response', {'response': direct_response})
+            
+            def print_result(self, result):
+                self.console_ui.print_result(result)
+                result_data = {
+                    'success': result.success,
+                    'command': result.command,
+                    'returncode': result.returncode,
+                    'stdout': result.stdout,
+                    'stderr': result.stderr,
+                    'output': result.truncated_output(max_length=500)  # Limit output size
+                }
+                self._emit_event('execution_result', result_data)
+            
+            def print_complete(self):
+                self.console_ui.print_complete()
+                self._emit_event('task_complete', {'status': 'completed'})
+            
+            def print_cancelled(self):
+                self.console_ui.print_cancelled()
+                self._emit_event('task_cancelled', {})
+            
+            def print_max_iterations(self, max_iter: int):
+                self.console_ui.print_max_iterations(max_iter)
+                self._emit_event('max_iterations', {'max_iter': max_iter})
+            
+            def print_error(self, message: str):
+                self.console_ui.print_error(message)
+                self._emit_event('error', {'message': message})
+            
+            def print_warning(self, message: str):
+                self.console_ui.print_warning(message)
+                self._emit_event('warning', {'message': message})
+            
+            def print_info(self, message: str):
+                self.console_ui.print_info(message)
+                self._emit_event('info', {'message': message})
+            
+            def print_danger_warning(self, reason: str):
+                self.console_ui.print_danger_warning(reason)
+                self._emit_event('danger_warning', {'reason': reason})
+            
+            def prompt_action(self) -> str:
+                # For web interface, we'll default to 'y' (execute) to avoid blocking
+                # In a more sophisticated implementation, we could wait for user input from the web UI
+                self._emit_event('prompt_action_needed', {'message': 'Dangerous operation detected, executing automatically in web mode', 'default': 'y'})
+                return 'y'
+            
+            def prompt_edit_command(self, default: str) -> str:
+                # For web interface, return the default command without editing
+                # In a more sophisticated implementation, we could allow editing via web UI
+                self._emit_event('command_edit_prompt', {'default': default, 'result': default})
+                return default
+            
+            def prompt_task(self) -> str:
+                # This shouldn't be called in web mode, but if it is, return empty
+                self._emit_event('task_prompt_needed', {'message': 'Task prompt needed in web mode'})
+                return ""
+            
+            def print_summary(self, context):
+                self.console_ui.print_summary(context)
+                summary_data = {
+                    'iteration': context.iteration,
+                    'status': context.status.value,
+                    'history_count': len(context.history)
+                }
+                self._emit_event('summary', summary_data)
+            
+            def print_skill_selected(self, skill_name: str, confidence: float, reasoning: str, capabilities: list):
+                self.console_ui.print_skill_selected(skill_name, confidence, reasoning, capabilities)
+                skill_data = {
+                    'skill_name': skill_name,
+                    'confidence': confidence,
+                    'reasoning': reasoning,
+                    'capabilities': capabilities
+                }
+                self._emit_event('skill_selected', skill_data)
+            
+            # Animation methods - forward to console but also emit events
+            def thinking_animation(self):
+                self._emit_event('thinking_started', {})
+                return self.console_ui.thinking_animation()
+            
+            def streaming_display(self):
+                self._emit_event('streaming_started', {})
+                
+                # Create our own streaming content class that captures and emits updates
+                class LocalStreamingContent:
+                    def __init__(self, socketio_wrapper):
+                        self.buffer = ""
+                        self.thinking = ""
+                        self.command = ""
+                        self.explanation = ""
+                        self.next_step = ""
+                        self.error_analysis = ""
+                        self.direct_response = ""
+                        self.code = ""
+                        self.title = ""
+                        self.outline = ""
+                        self.socketio_wrapper = socketio_wrapper
+                        
+                        # Record each field's currently displayed length
+                        self.thinking_displayed = 0
+                        self.command_displayed = 0
+                        self.explanation_displayed = 0
+                        self.next_step_displayed = 0
+                        self.error_analysis_displayed = 0
+                        self.direct_response_displayed = 0
+                        self.code_displayed = 0
+                        self.title_displayed = 0
+                
+                    def add_token(self, token: str):
+                        """Add new token and extract field content in real-time"""
+                        self.buffer += token
+                        self._extract_fields()
+                        # Emit the updated content via WebSocket
+                        response_data = {
+                            'thinking': self.thinking,
+                            'command': self.command,
+                            'explanation': self.explanation,
+                            'next_step': self.next_step,
+                            'direct_response': self.direct_response,
+                            'code': self.code,
+                            'title': self.title,
+                            'outline': self.outline,
+                            'error_analysis': self.error_analysis
+                        }
+                        self.socketio_wrapper._emit_event('streaming_update', response_data)
+                    
+                    def _extract_fields(self):
+                        """Extract field content in real-time"""
+                        # Extract thinking field
+                        thinking_match = re.search(r'"thinking"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if thinking_match:
+                            raw_content = thinking_match.group(1)
+                            self.thinking = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract error_analysis field
+                        error_match = re.search(r'"error_analysis"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if error_match:
+                            raw_content = error_match.group(1)
+                            self.error_analysis = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract command field
+                        command_match = re.search(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if command_match:
+                            raw_content = command_match.group(1)
+                            self.command = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract explanation field
+                        explanation_match = re.search(r'"explanation"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if explanation_match:
+                            raw_content = explanation_match.group(1)
+                            self.explanation = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract next_step field
+                        next_step_match = re.search(r'"next_step"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if next_step_match:
+                            raw_content = next_step_match.group(1)
+                            self.next_step = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract direct_response field
+                        direct_response_match = re.search(r'"direct_response"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if direct_response_match:
+                            raw_content = direct_response_match.group(1)
+                            self.direct_response = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract code field
+                        code_match = re.search(r'"code"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if code_match:
+                            raw_content = code_match.group(1)
+                            self.code = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+                        
+                        # Extract PPT skill title field
+                        title_match = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
+                        if title_match:
+                            raw_content = title_match.group(1)
+                            self.title = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
+
+                        outline_start_pos = self.buffer.find('"outline"')
+                        if outline_start_pos != -1:
+                            self.outline = self.buffer[outline_start_pos:]
+
+                content = LocalStreamingContent(self)
+                
+                # Use the original streaming_display context manager but intercept the callback
+                from contextlib import contextmanager
+                
+                @contextmanager
+                def streaming_context():
+                    # Enter the original streaming_display context manager
+                    original_cm = self.console_ui.streaming_display()
+                    with original_cm as original_callback:
+                        # Create a wrapper callback that sends data to both original and web
+                        def wrapped_callback(token: str):
+                            # Process token for web interface
+                            content.add_token(token)
+                            # Pass token to original callback for console display
+                            original_callback(token)
+                        
+                        yield wrapped_callback
+                
+                return streaming_context()
+
+            def executing_animation(self, command: str):
+                self._emit_event('executing_started', {'command': command})
+                return self.console_ui.executing_animation(command)
+            
+            def skill_selection_animation(self):
+                self._emit_event('skill_selection_started', {})
+                return self.console_ui.skill_selection_animation()
+            
+            def browser_code_generation_animation(self):
+                self._emit_event('browser_code_generation_started', {'message': 'Generating browser automation code...'})
+                return self.console_ui.browser_code_generation_animation()
+        
+        return WebUIWrapper(console_ui, session_id, self.socketio)
+
+
+def create_app():
+    """Create Flask app with SocketIO"""
+    app = Flask(__name__, 
+                template_folder=os.path.join(os.path.dirname(__file__), 'templates'),
+                static_folder=os.path.join(os.path.dirname(__file__), 'static'))
+    app.secret_key = 'ask-shell-web-ui-secret-key'
+    
+    # Configure SocketIO with async mode
+    socketio = SocketIO(app, cors_allowed_origins="*", async_mode='threading')
+    
+    # Initialize WebUI
+    web_ui = WebUI(app, socketio)
+    
+    return app, socketio
+
+
+def run_web_server(host='localhost', port=5000, debug=False):
+    """Run the web server"""
+    app, socketio = create_app()
+    print(f"Starting Ask-Shell Web UI at http://{host}:{port}")
+    socketio.run(app, host=host, port=port, debug=debug, use_reloader=False)
+
+
+if __name__ == '__main__':
+    run_web_server(debug=True)

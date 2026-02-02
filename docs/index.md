@@ -54,7 +54,9 @@ Ask-Shell is an **AI-powered task automation agent** that goes beyond simple com
 - 🧪 **Demo Mode** - Try it out without an API Key
 - 🌐 **Browser Automation** - Built-in Playwright integration for web tasks
 - 📊 **File Generation** - Create PPTs, images and other files from natural language
+- 💬 **Communication Automation** - Feishu automation for macOS (WeChat automation available but currently disabled)
 - 🔌 **Extensible Skills** - Plugin-ready architecture for adding new capabilities
+- 🌐 **Web Interface** - Access Ask-Shell through a web interface
 
 ## Quick Links
 

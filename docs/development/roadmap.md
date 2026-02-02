@@ -44,8 +44,8 @@ Future plans and features for Ask-Shell.
 ### Developer Experience
 
 - [ ] VS Code extension
-- [ ] Web UI interface
-- [ ] REST API server mode
+- [x] Web UI interface
+- [x] REST API server mode
 - [ ] Python SDK for embedding
 
 ## Version 0.4.0 (Q3 2026)

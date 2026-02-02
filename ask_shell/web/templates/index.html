@@ -1,0 +1,737 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ask-Shell Web Interface</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: #f5f7fa;
+            color: #333;
+            line-height: 1.6;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+            border-bottom: 1px solid #eaeaea;
+        }
+
+        h1 {
+            color: #2c3e50;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 1.1rem;
+        }
+
+        .input-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            margin-bottom: 30px;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #task-input {
+            flex: 1;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1rem;
+            transition: border-color 0.3s;
+        }
+
+        #task-input:focus {
+            outline: none;
+            border-color: #3498db;
+        }
+
+        #submit-btn {
+            padding: 15px 30px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        #submit-btn:hover {
+            background: #2980b9;
+        }
+
+        #submit-btn:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+        }
+
+        .output-section {
+            background: white;
+            border-radius: 10px;
+            padding: 25px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);
+            min-height: 500px;
+        }
+
+        .output-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .output-title {
+            font-size: 1.3rem;
+            color: #2c3e50;
+        }
+
+        #clear-btn {
+            padding: 8px 16px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        #clear-btn:hover {
+            background: #c0392b;
+        }
+
+        #output-container {
+            max-height: 600px;
+            overflow-y: auto;
+            padding: 10px;
+            background: #fafafa;
+            border-radius: 8px;
+            border: 1px solid #eee;
+        }
+
+        .log-entry {
+            margin-bottom: 15px;
+            padding: 12px;
+            border-radius: 6px;
+            font-family: monospace;
+            font-size: 0.95rem;
+            line-height: 1.5;
+        }
+
+        .log-entry:last-child {
+            margin-bottom: 0;
+        }
+
+        .task-received {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+        }
+
+        .step-started {
+            background: #e8f5e9;
+            border-left: 4px solid #4caf50;
+        }
+
+        .response-generated {
+            background: #fff3e0;
+            border-left: 4px solid #ff9800;
+        }
+
+        .execution-result {
+            background: #f3e5f5;
+            border-left: 4px solid #9c27b0;
+        }
+
+        .skill-selected {
+            background: #e0f2f1;
+            border-left: 4px solid #00bcd4;
+        }
+
+        .error-message {
+            background: #ffebee;
+            border-left: 4px solid #f44336;
+            color: #c62828;
+        }
+
+        .warning-message {
+            background: #fff8e1;
+            border-left: 4px solid #ffc107;
+            color: #ff8f00;
+        }
+
+        .info-message {
+            background: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            color: #1565c0;
+        }
+
+        .command-output {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 10px;
+            border-radius: 4px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            white-space: pre-wrap;
+        }
+
+        .thinking-indicator {
+            display: inline-block;
+            width: 20px;
+            height: 20px;
+            border: 3px solid rgba(52, 152, 219, 0.3);
+            border-radius: 50%;
+            border-top-color: #3498db;
+            animation: spin 1s linear infinite;
+            margin-right: 10px;
+            vertical-align: middle;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .status-indicator {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 500;
+        }
+
+        .status-running {
+            background: #fff3e0;
+            color: #ff9800;
+        }
+
+        .status-completed {
+            background: #e8f5e9;
+            color: #4caf50;
+        }
+
+        .status-error {
+            background: #ffebee;
+            color: #f44336;
+        }
+
+        .panel {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 8px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+
+        .panel-title {
+            font-weight: 600;
+            margin-bottom: 10px;
+            color: #495057;
+        }
+
+        .command-panel {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+        }
+
+        .loading {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            color: #7f8c8d;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            .input-group {
+                flex-direction: column;
+            }
+
+            #task-input, #submit-btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🤖 Ask-Shell</h1>
+            <p class="subtitle">Control your terminal with natural language</p>
+        </header>
+
+        <section class="input-section">
+            <div class="input-group">
+                <input type="text" id="task-input" placeholder="Enter your task (e.g., 'List all Python files in current directory')" autocomplete="off">
+                <button id="submit-btn">Execute Task</button>
+            </div>
+        </section>
+
+        <section class="output-section">
+            <div class="output-header">
+                <h2 class="output-title">Execution Log</h2>
+                <button id="clear-btn">Clear Log</button>
+            </div>
+            <div id="output-container">
+                <div class="loading">
+                    <span>No tasks executed yet. Enter a task and click "Execute Task" to begin.</span>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const socket = io();
+        const outputContainer = document.getElementById('output-container');
+        const taskInput = document.getElementById('task-input');
+        const submitBtn = document.getElementById('submit-btn');
+        const clearBtn = document.getElementById('clear-btn');
+        
+        // Generate a unique session ID
+        const sessionId = Date.now().toString();
+        
+        // Listen for various events from the server
+        socket.on('connect', function() {
+            console.log('Connected to server');
+        });
+
+        socket.on('task_received', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Task Received', `<strong>Task:</strong> ${escapeHtml(data.task)}`, 'task-received');
+        });
+
+        socket.on('step_started', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Clear the current streaming element when a new step starts
+            currentStreamingElement = null;
+            addLogEntry('Step Started', `Starting step <strong>${data.step}</strong>`, 'step-started');
+        });
+
+        socket.on('response_generated', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Hide/remove the skill selection animation if it exists
+            if (skillSelectionElement) {
+                skillSelectionElement.remove();
+                skillSelectionElement = null;
+            }
+            
+            // Clear the current streaming element when response is fully generated
+            currentStreamingElement = null;
+            
+            let content = '';
+
+            if (data.thinking) {
+                content += `<div class="panel"><div class="panel-title">💡 Thinking Process</div>${escapeHtml(data.thinking)}</div>`;
+            }
+
+            if (data.command) {
+                content += `<div class="panel"><div class="panel-title">✨ Generated Command</div><div class="command-panel">${escapeHtml(data.command)}</div></div>`;
+            }
+
+            if (data.explanation) {
+                content += `<div class="panel"><div class="panel-title">💬 Explanation</div>${escapeHtml(data.explanation)}</div>`;
+            }
+
+            if (data.next_step) {
+                content += `<div class="panel"><div class="panel-title">📋 Next Step</div>${escapeHtml(data.next_step)}</div>`;
+            }
+
+            if (data.direct_response) {
+                content += `<div class="panel"><div class="panel-title">💡 AI Response</div>${escapeHtml(data.direct_response)}</div>`;
+            }
+
+            if (data.error_analysis) {
+                content += `<div class="panel"><div class="panel-title">🔍 Error Analysis</div>${escapeHtml(data.error_analysis)}</div>`;
+            }
+            
+            if (data.skill_name && data.select_reason) {
+                content += `<div class="panel"><div class="panel-title">🎯 Skill Selected</div>Selected <strong>${data.skill_name}</strong>: ${escapeHtml(data.select_reason)}</div>`;
+            }
+
+            if (content) {
+                addLogEntry('Response Generated', content, 'response-generated');
+            }
+        });
+
+        socket.on('execution_result', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            let content = `<strong>Command:</strong> ${escapeHtml(data.command || '(no command)')}<br>`;
+            content += `<strong>Status:</strong> ${data.success ? '<span style="color: green;">SUCCESS</span>' : '<span style="color: red;">FAILED</span>'}<br>`;
+
+            if (data.output && data.output !== '(无输出)') {
+                content += `<div class="command-output">${escapeHtml(data.output)}</div>`;
+            }
+
+            addLogEntry('Execution Result', content, 'execution-result');
+        });
+
+        socket.on('skill_selected', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            let content = `<strong>Skill:</strong> ${data.skill_name}<br>`;
+            content += `<strong>Confidence:</strong> ${(data.confidence * 100).toFixed(0)}%<br>`;
+            content += `<strong>Reasoning:</strong> ${escapeHtml(data.reasoning)}<br>`;
+            content += `<strong>Capabilities:</strong> ${data.capabilities.join(', ')}`;
+
+            addLogEntry('Skill Selected', content, 'skill-selected');
+        });
+
+        socket.on('error_analysis', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Error Analysis', escapeHtml(data.analysis), 'error-message');
+        });
+
+        socket.on('error', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Error', escapeHtml(data.message), 'error-message');
+        });
+
+        socket.on('warning', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Warning', escapeHtml(data.message), 'warning-message');
+        });
+
+        socket.on('info', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Info', escapeHtml(data.message), 'info-message');
+        });
+
+        socket.on('task_complete', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Clear the streaming update element when task completes
+            streamingUpdateElement = null;
+            let content = `Task completed with status: <strong>${data.status}</strong>`;
+            if (data.summary) {
+                content += `<br>Iterations: ${data.summary.iterations}, Success: ${data.summary.success_count}, Failure: ${data.summary.failure_count}`;
+            }
+            addLogEntry('Task Completed', content, 'status-completed');
+            submitBtn.disabled = false;
+        });
+
+        socket.on('task_cancelled', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Task Cancelled', 'Task was cancelled by user', 'status-error');
+            submitBtn.disabled = false;
+        });
+
+        socket.on('max_iterations', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Max Iterations Reached', `Reached maximum iterations limit: ${data.max_iter}`, 'status-error');
+            submitBtn.disabled = false;
+        });
+
+        socket.on('thinking_started', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Hide/remove the skill selection animation if it exists
+            if (skillSelectionElement) {
+                skillSelectionElement.remove();
+                skillSelectionElement = null;
+            }
+            addLogEntry('Thinking', '<span class="thinking-indicator"></span> AI is thinking...', 'info-message');
+        });
+
+        socket.on('executing_started', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Hide/remove the skill selection animation if it exists
+            if (skillSelectionElement) {
+                skillSelectionElement.remove();
+                skillSelectionElement = null;
+            }
+            addLogEntry('Executing Command', `Running: <strong>${escapeHtml(data.command)}</strong>`, 'info-message');
+        });
+
+        socket.on('skill_selection_started', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            // Create a temporary element for skill selection
+            skillSelectionElement = document.createElement('div');
+            skillSelectionElement.className = 'log-entry info-message';
+            const timestamp = new Date().toLocaleTimeString();
+            skillSelectionElement.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">
+                    <span style="color: #7f8c8d; font-size: 0.8em;">${timestamp}</span>
+                    &nbsp;&nbsp;
+                    <span style="color: #2c3e50;">Skill Selection</span>
+                </div>
+                <div><span class="thinking-indicator"></span> Analyzing task and selecting skill...</div>
+            `;
+            outputContainer.appendChild(skillSelectionElement);
+            
+            // Remove loading message if present
+            const loadingElement = outputContainer.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
+            // Scroll to bottom
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        });
+
+        socket.on('browser_code_generation_started', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            addLogEntry('Browser Automation', '<span class="thinking-indicator"></span> Generating browser automation code...', 'info-message');
+        });
+
+        // Add variables to keep track of active animations
+        let skillSelectionElement = null;
+        // Track the current streaming element
+        let currentStreamingElement = null;
+
+        socket.on('streaming_update', function(data) {
+            // Only process events for this session
+            if (data.session_id !== sessionId) {
+                return;
+            }
+            
+            let content = '';
+            
+            if (data.thinking) {
+                content += `<div class="panel"><div class="panel-title">💡 Thinking Process</div>${escapeHtml(data.thinking)}</div>`;
+            }
+            
+            if (data.command) {
+                content += `<div class="panel"><div class="panel-title">✨ Generated Command</div><div class="command-panel">${escapeHtml(data.command)}</div></div>`;
+            }
+            
+            if (data.explanation) {
+                content += `<div class="panel"><div class="panel-title">💬 Explanation</div>${escapeHtml(data.explanation)}</div>`;
+            }
+            
+            if (data.next_step) {
+                content += `<div class="panel"><div class="panel-title">📋 Next Step</div>${escapeHtml(data.next_step)}</div>`;
+            }
+            
+            if (data.direct_response) {
+                content += `<div class="panel"><div class="panel-title">💡 AI Response</div>${escapeHtml(data.direct_response)}</div>`;
+            }
+            
+            if (data.error_analysis) {
+                content += `<div class="panel"><div class="panel-title">🔍 Error Analysis</div>${escapeHtml(data.error_analysis)}</div>`;
+            }
+            
+            if (data.title) {
+                content += `<div class="panel"><div class="panel-title">🎯 PPT Title</div>${escapeHtml(data.title)}</div>`;
+            }
+            
+            if (data.code) {
+                content += `<div class="panel"><div class="panel-title">💻 Generated Code</div><div class="command-panel">${escapeHtml(data.code)}</div></div>`;
+            }
+            
+            if (data.outline) {
+                content += `<div class="panel"><div class="panel-title">📋 PPT Outline</div>${escapeHtml(data.outline)}</div>`;
+            }
+            
+            if (content) {
+                // If there's no current streaming element, create one
+                if (!currentStreamingElement) {
+                    currentStreamingElement = document.createElement('div');
+                    currentStreamingElement.className = 'log-entry response-generated';
+                    const timestamp = new Date().toLocaleTimeString();
+                    currentStreamingElement.innerHTML = `
+                        <div style="font-weight: bold; margin-bottom: 5px;">
+                            <span style="color: #7f8c8d; font-size: 0.8em;">${timestamp}</span>
+                            &nbsp;&nbsp;
+                            <span style="color: #2c3e50;">Streaming Update</span>
+                        </div>
+                        <div id="streaming-content">${content}</div>
+                    `;
+                    outputContainer.appendChild(currentStreamingElement);
+                } else {
+                    // Update the existing streaming content
+                    const contentDiv = currentStreamingElement.querySelector('#streaming-content');
+                    if (contentDiv) {
+                        contentDiv.innerHTML = content;
+                    } else {
+                        // Fallback if content div doesn't exist
+                        const timestamp = new Date().toLocaleTimeString();
+                        currentStreamingElement.innerHTML = `
+                            <div style="font-weight: bold; margin-bottom: 5px;">
+                                <span style="color: #7f8c8d; font-size: 0.8em;">${timestamp}</span>
+                                &nbsp;&nbsp;
+                                <span style="color: #2c3e50;">Streaming Update</span>
+                            </div>
+                            <div id="streaming-content">${content}</div>
+                        `;
+                    }
+                }
+                
+                // Scroll to bottom
+                outputContainer.scrollTop = outputContainer.scrollHeight;
+            }
+        });
+        
+        // Helper function to add timestamp to element
+        function addTimestampAndAppend(element, title) {
+            const timestamp = new Date().toLocaleTimeString();
+            element.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">
+                    <span style="color: #7f8c8d; font-size: 0.8em;">${timestamp}</span>
+                    &nbsp;&nbsp;
+                    <span style="color: #2c3e50;">${title}</span>
+                </div>
+                <div id="streaming-content">Waiting for updates...</div>
+            `;
+        }
+        
+        // Handle form submission
+        submitBtn.addEventListener('click', function() {
+            const task = taskInput.value.trim();
+            if (!task) {
+                alert('Please enter a task');
+                return;
+            }
+            
+            // Clear the loading message if it's present
+            const loadingElement = outputContainer.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
+            // Disable button and send task
+            submitBtn.disabled = true;
+            socket.emit('run_task_request', {
+                task: task,
+                session_id: sessionId
+            });
+            
+            // Clear input
+            taskInput.value = '';
+        });
+
+        // Allow Enter key to submit
+        taskInput.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                submitBtn.click();
+            }
+        });
+
+        // Clear log button
+        clearBtn.addEventListener('click', function() {
+            outputContainer.innerHTML = '<div class="loading"><span>Log cleared. Enter a task to begin.</span></div>';
+        });
+
+        // Helper function to add log entries
+        function addLogEntry(title, content, className) {
+            const timestamp = new Date().toLocaleTimeString();
+            const entryDiv = document.createElement('div');
+            entryDiv.className = `log-entry ${className}`;
+            entryDiv.innerHTML = `
+                <div style="font-weight: bold; margin-bottom: 5px;">
+                    <span style="color: #7f8c8d; font-size: 0.8em;">${timestamp}</span>
+                    &nbsp;&nbsp;
+                    <span style="color: #2c3e50;">${title}</span>
+                </div>
+                <div>${content}</div>
+            `;
+            
+            // Remove loading message if present
+            const loadingElement = outputContainer.querySelector('.loading');
+            if (loadingElement) {
+                loadingElement.remove();
+            }
+            
+            outputContainer.appendChild(entryDiv);
+            
+            // Scroll to bottom
+            outputContainer.scrollTop = outputContainer.scrollHeight;
+        }
+
+        // Helper function to escape HTML
+        function escapeHtml(text) {
+            if (typeof text !== 'string') {
+                return String(text);
+            }
+            var map = {
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#039;'
+            };
+            
+            return text.replace(/[&<>"']/g, function(m) { return map[m]; });
+        }
+    </script>
+</body>
+</html>

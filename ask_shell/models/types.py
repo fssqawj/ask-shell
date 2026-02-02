@@ -21,6 +21,7 @@ class SkillCapability(Enum):
     FILE_GENERATION = "file_generation"  # Generate files (PPT, images, videos, etc.)
     WEB_INTERACTION = "web_interaction"  # Interact with web services/APIs
     DATA_ANALYSIS = "data_analysis"  # Analyze and visualize data
+    GUI_AUTOMATION = "gui_automation"  # Automate GUI applications (e.g., WeChat, desktop apps)
 
 
 @dataclass

@@ -2,6 +2,7 @@
 
 from rich.live import Live
 from rich.panel import Panel
+from loguru import logger
 import json
 import json_repair
 import re
@@ -64,7 +65,7 @@ class ConsoleUI:
                 self.direct_response = ""
                 self.code = ""
                 self.title = ""
-                self.outline = []
+                self.outline = ""
                                 
                 # 记录每个字段当前已显示的长度
                 self.thinking_displayed = 0
@@ -130,30 +131,11 @@ class ConsoleUI:
                 if title_match:
                     raw_content = title_match.group(1)
                     self.title = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                
-                # 提取 PPT skill outline 字段 using json_repair
-                try:
-                    # Attempt to use json_repair to parse the outline field
-                    
-                    # Look for the outline field in the buffer
-                    outline_match = re.search(r'("outline"\s*:\s*\[.*?\])', self.buffer, re.DOTALL)
-                    if outline_match:
-                        outline_part = outline_match.group(1)
-                        # Extract the value after the colon
-                        colon_pos = outline_part.find(':')
-                        if colon_pos != -1:
-                            outline_value = outline_part[colon_pos+1:].strip()
-                            self.outline = json_repair.loads(outline_value)
-                except (ImportError, Exception):
-                    # Fallback: try to find and parse outline if it appears complete
-                    try:
-                        outline_match = re.search(r'"outline"\s*:\s*(\[.*?\])', self.buffer)
-                        if outline_match:
-                            self.outline = json.loads(outline_match.group(1))
-                    except (json.JSONDecodeError, AttributeError):
-                        pass  # Keep trying as more tokens arrive
 
-            
+                outline_start_pos = self.buffer.find('"outline"')
+                if outline_start_pos != -1:
+                    self.outline = self.buffer[outline_start_pos:]
+
             def get_display(self):
                 """获取显示内容 - 只显示新增的内容"""
                 from rich.console import Group
@@ -180,16 +162,8 @@ class ConsoleUI:
                 
                 # PPT Outline - 实时显示
                 if self.outline:
-                    outline_content = ""
-                    for i, slide in enumerate(self.outline, 1):
-                        if isinstance(slide, dict):
-                            title = slide.get('title', 'Untitled')
-                            content = slide.get('content', '')[:100]  # Limit content preview
-                            outline_content += f"{i}. {title}\n   {content}{'...' if len(slide.get('content', '')) > 100 else ''}\n\n"
-                        else:
-                            outline_content += f"{i}. {str(slide)}\n\n"
                     panels.append(Panel(
-                        outline_content.rstrip(),
+                        self.outline,
                         title="[bold blue]📋 PPT 大纲[/bold blue]",
                         border_style="blue",
                         padding=(1, 2)
@@ -251,7 +225,7 @@ class ConsoleUI:
         
         content = StreamingContent()
         
-        with Live(content.get_display(), console=self.console, refresh_per_second=10, screen=False) as live:
+        with Live(content.get_display(), console=self.console, refresh_per_second=10, screen=False, vertical_overflow="visible") as live:
             def update_callback(token: str):
                 content.add_token(token)
                 live.update(content.get_display())

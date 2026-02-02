@@ -92,6 +92,27 @@ Ask-Shell:  Step 1: Analyze directory structure
 
 <p align="center"><em>Demo 2: Using ask-shell to control terminal with natural language</em></p>
 
+## 🧩 Skills & Capabilities
+
+Ask-Shell features a flexible skill system that enables various types of task execution:
+
+- **Command Skill**: Traditional command generation and text processing
+- **Direct LLM Skill**: Translation, summarization, and analysis without command execution
+- **Browser Skill**: Web automation using Playwright with anti-bot detection
+- **PPT Skill**: Presentation generation from natural language
+- **Image Skill**: AI image generation capabilities
+- **WeChat Skill**: WeChat automation for macOS (GUI automation) - *currently disabled*
+- **Feishu Skill**: Feishu/Lark automation for macOS (GUI automation)
+- **Extensible Skills**: Plugin-ready architecture for adding new capabilities
+
+## 🌐 Web Interface
+
+Ask-Shell also provides a web interface for convenient access:
+
+```bash
+ask --web  # Starts the web server at http://localhost:5000
+```
+
 Ask-Shell provides a beautiful terminal interface with real-time feedback:
 
 - 💭 **Real-time Thinking Process** - See AI's thought process
@@ -224,6 +245,21 @@ ask "check system memory usage"
 ask "show disk usage for all mounted drives"
 ```
 
+#### **Communication & File Generation**
+```bash
+# WeChat automation (macOS)
+# Feishu/Lark automation (macOS)
+ask "send message 'Meeting reminder' to contact 'Team Alpha' via Feishu"
+
+# Note: WeChat automation is currently disabled but available in the code
+
+# PPT generation
+ask "create a presentation about AI trends"
+
+# Image generation
+ask "generate an image of a futuristic cityscape"
+```
+
 #### **More Examples**
 ```bash
 # Text processing with verification
@@ -278,6 +314,8 @@ ask-shell/
 | **Dangerous operation detection** | ⚠️ Basic | ⚠️ Basic | ✅ Yes | ✅ **Dual-layer** |
 | **Browser automation** | ❌ | ❌ | ❌ | ✅ **Built-in** |
 | **File generation** | ❌ | ❌ | ❌ | ✅ **PPT, Images, etc.** |
+| **Communication automation** | ❌ | ❌ | ❌ | ✅ **Feishu, WeChat (disabled)** |
+| **Web interface** | ❌ | ❌ | ❌ | ✅ **Available** |
 | **Open source** | ✅ Python | ✅ Rust | ❌ Closed | ✅ **Python** |
 | **Easy to extend** | ⚠️ | ⚠️ | ❌ | ✅ **Plugin-ready** |
 
@@ -290,8 +328,9 @@ ask-shell/
 
 ### Advanced Capabilities
 
-**Browser Automation**: Built-in Playwright integration for web automation tasks.
+**Browser Automation**: Built-in Playwright integration for web automation tasks with anti-bot detection.
 **File Generation**: Generate PPTs, images, and other files directly from natural language.
+**Communication Automation**: Feishu automation for macOS using GUI automation (WeChat automation available but currently disabled).
 **Extensible Skills**: Plugin-ready architecture for adding new capabilities.
 
 ## ⚙️ Configuration Options
@@ -316,8 +355,9 @@ MODEL_NAME=gpt-4
 - `task` - Task description to execute
 - `-i, --interactive` - Interactive mode
 - `-a, --auto` - Auto execution mode (no confirmation needed)
-- `-d, --demo` - Demo mode (no API Key required)
+- `-l, --llm` - Direct LLM mode (translation, summarization, etc.)
 - `-w, --workdir` - Specify working directory
+- `--web` - Start web interface
 
 ## 🔒 Safety Features
 
@@ -361,6 +401,7 @@ Ask-Shell takes safety seriously with multiple protection layers:
 ### Architecture Highlights
 
 - **Agent Loop Pattern**: Continuous task execution with feedback integration
+- **Skill-Based Architecture**: Flexible skill system supporting multiple capabilities
 - **Context Management**: Full conversation history with result tracking
 - **Modular Design**: Easy to add new LLM providers, executors, or UI components
 - **Safety-First**: Dual-layer protection (AI + blacklist)
@@ -371,7 +412,7 @@ Ask-Shell takes safety seriously with multiple protection layers:
 - [ ] Task history and replay functionality
 - [ ] Plugin system for custom commands
 - [ ] Task templates library
-- [ ] Web UI interface
+- [x] Web UI interface
 - [ ] Team collaboration features
 
 ## 📝 License

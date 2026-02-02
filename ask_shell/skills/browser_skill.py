@@ -2,7 +2,7 @@
 
 from typing import Optional, List, Dict, Any
 import time
-
+from bs4 import BeautifulSoup, Tag
 from loguru import logger
 from .base_skill import BaseSkill, SkillCapability, SkillExecutionResponse
 from ..llm.openai_client import OpenAIClient
@@ -83,6 +83,7 @@ import sys
 # 添加项目路径
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+# 导入浏览器技能类
 from ask_shell.skills.browser_skill import BrowserSkill
 import time
 import random
@@ -257,8 +258,8 @@ except Exception as e:
         if context is None:
             # 尝试复用现有的context，而不是创建新的
             if browser.contexts and reuse_existing:
-                # 如果有现成的context，使用第一个
-                context = browser.contexts[0]
+                # 如果有现成的context，使用最后一个
+                context = browser.contexts[-1]
                 print("🔄 复用现有的浏览器上下文")
             else:
                 context = browser.new_context(
@@ -277,53 +278,12 @@ except Exception as e:
         # 在选定的context中查找页面，优先使用非空白页面
         # 为了确保页面状态持久化，我们优先使用之前保存的页面对象（如果它仍然有效）
         page = None
-        
-        # 首先检查之前保存的页面是否仍然存在于当前context中
-        if cls._browser_page and cls._browser_page in context.pages:
-            try:
-                # 检查页面是否仍然可用
-                current_url = cls._browser_page.url
-                if current_url and current_url != 'about:blank' and 'chrome://' not in current_url:
-                    page = cls._browser_page
-                    print(f"🔄 复用之前的浏览器页面（当前URL: {page.url}）")
-                else:
-                    # 如果之前的页面是空白的，则寻找其他非空白页面
-                    for p in context.pages:
-                        try:
-                            if p.url and p.url != 'about:blank' and 'chrome://' not in p.url:
-                                page = p
-                                break
-                        except:
-                            continue
-            except:
-                # 如果之前的页面不可用，则寻找其他页面
-                for p in context.pages:
-                    try:
-                        if p.url and p.url != 'about:blank' and 'chrome://' not in p.url:
-                            page = p
-                            break
-                    except:
-                        continue
-        else:
-            # 寻找非空白页面
-            for p in context.pages:
-                try:
-                    if p.url and p.url != 'about:blank' and 'chrome://' not in p.url:
-                        page = p
-                        break
-                except:
-                    continue
-                        
-        # 如果没有找到非空白页面，使用第一个可用页面（避免创建新页面）
-        if page is None:
-            if context.pages:
-                page = context.pages[0]
-                print(f"♻️  已连接到运行中的浏览器（当前URL: {page.url}）")
-            else:
-                page = context.new_page()
-                print("♻️  已连接到运行中的浏览器（新页面）")
-        else:
+        if context.pages:
+            page = context.pages[-1]
             print(f"♻️  已连接到运行中的浏览器（当前URL: {page.url}）")
+        else:
+            page = context.new_page()
+            print("♻️  已连接到运行中的浏览器（新页面）")
         
         # 更新类级变量
         # Don't create a new playwright instance if one already exists
@@ -838,43 +798,81 @@ except Exception as e:
         cls._operation_history = []
     
     @classmethod
+    def clean_html(cls, full_html: str) -> str:
+        soup = BeautifulSoup(full_html, 'lxml')  # 用 lxml 解析器，速度快
+
+        # Step 1: 去除完全无关的标签（头去尾的核心）
+        if soup.head:
+            soup.head.decompose()  # 删除整个 <head>
+        for tag in soup(['script', 'style', 'noscript', 'meta', 'link', 'svg', 'path']):
+            tag.decompose()  # 删除脚本、样式等
+
+        # Step 2: 去除常见无关区块（导航、页脚、广告、侧边栏等）
+        # 根据常见页面结构添加 selector，可自定义增删
+        unwanted_selectors = [
+            'nav', 'header', 'footer', 'aside',
+            '[class*="nav"]', '[class*="header"]', '[class*="footer"]', '[class*="sidebar"]',
+            '[class*="ad"]', '[class*="advert"]', '[id*="ad"]', '[class*="cookie"]', '[class*="banner"]'
+        ]
+        for selector in unwanted_selectors:
+            for tag in soup.select(selector):
+                tag.decompose()
+
+        # Step 3: 提取主要内容区域（优先级从高到低）
+        main_content = None
+        # 常见主要内容容器
+        candidates = [
+            soup.find('main'),
+            soup.find('article'),
+            soup.find(id='content') or soup.find(id='main') or soup.find(id='container'),
+            soup.find(role='main'),  # ARIA role
+            soup.body  # 兜底：整个 body
+        ]
+        for candidate in candidates:
+            if candidate:
+                main_content = candidate
+                break
+
+        # Step 4: 输出清理后的 HTML（保留标签结构，便于模型理解定位）
+        if main_content and isinstance(main_content, Tag):
+            cleaned_html = main_content.prettify()  # 美化格式，便于阅读
+        else:
+            cleaned_html = str(soup.body) if soup.body else "无有效内容"
+
+        # 可选：进一步限制长度（如果还是太大）
+        if len(cleaned_html) > 8192:
+            cleaned_html = cleaned_html[:8192] + "\n...（内容过长，已截断）"
+        return cleaned_html
+
+    @classmethod
     def get_current_page_structure(cls) -> str:
-        """Get the current page structure (HTML content and elements)"""
+        """Get the current page structure optimized for LLM-driven automation (low token, high usability)"""
 
         cls._try_connect_to_existing_browser()
 
-        if cls._browser_page:
-            try:
-                # Get page title
-                title = cls._browser_page.title()
-                
-                # Get URL
-                url = cls._browser_page.url
-                
-                # Get page content (HTML)
-                html_content = cls._browser_page.content()
-                
-                # Get visible text content
-                body_text = cls._browser_page.text_content('body')
-                
-                # Show all content without truncation - critical for information processing in subsequent steps
-                # No content size limiting to ensure complete information is available for processing
-                
-                structure_info = f"""=== 当前页面信息 ===
-URL: {url}
-标题: {title}
-
-页面结构 (HTML片段):
-{html_content}
-
-页面可见文本 (部分):
-{body_text}"""
-                
-                return structure_info
-            except Exception as e:
-                return f"获取页面结构失败: {str(e)}"
-        else:
+        if not cls._browser_page:
             return "浏览器页面未初始化，无法获取页面结构"
+
+        try:
+            page = cls._browser_page
+            title = page.title()
+            url = page.url
+
+            full_html = page.content() or ""
+            cleaned_html = cls.clean_html(full_html)
+
+            structure_info = f"""=== 当前页面信息 ===
+    URL: {url}
+    标题: {title}
+
+    === 页面HTML（前 ~8192 字符）===
+    {cleaned_html}"""
+
+            return structure_info
+
+        except Exception as e:
+            import traceback
+            return f"获取页面结构失败: {str(e)}\n{traceback.format_exc()}"
     
     def reset(self):
         """重置技能状态（会被 agent 调用）"""

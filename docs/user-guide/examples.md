@@ -273,6 +273,37 @@ ask "create an image of a futuristic cityscape"
 ask "generate a logo for a tech startup"
 ```
 
+### WeChat Automation (macOS)
+
+WeChat automation is available for macOS using GUI automation, but is currently disabled in the default configuration.
+
+To enable it, uncomment the WeChat skill registration in the agent code.
+
+```bash
+# Once enabled, you can use commands like:
+ask "send message 'Hello!' to contact 'John Doe' via WeChat"
+ask "send message 'Meeting reminder' to group 'Team Alpha' via WeChat"
+```
+
+### Feishu Automation (macOS)
+
+Automate Feishu/Lark messaging on macOS using GUI automation.
+
+```bash
+ask "send message 'Hello!' to contact 'Jane Smith' via Feishu"
+ask "send message 'Daily report ready' to group 'Project Team' via Feishu"
+```
+
+### Direct LLM Processing
+
+Perform direct language processing without command execution.
+
+```bash
+ask -l "translate this text to Spanish: Hello, how are you?"
+ask -l "summarize this article in 3 bullet points"
+ask -l "explain quantum computing in simple terms"
+```
+
 ### Open Websites
 
 ```bash

@@ -4,20 +4,20 @@ The Agent module implements the core task automation loop.
 
 ## Overview
 
-The `Agent` class orchestrates the entire task execution workflow, managing the interaction between the LLM, command executor, and user interface.
+The `AskShell` class orchestrates the entire task execution workflow, managing the interaction between the LLM, command executor, and user interface.
 
-## Class: TaskAgent
+## Class: AskShell
 
 Located in: [`ask_shell/agent.py`](https://github.com/fssqawj/ask-shell/blob/main/ask_shell/agent.py)
 
 ### Initialization
 
 ```python
-from ask_shell.agent import TaskAgent
+from ask_shell.agent import AskShell
 from ask_shell.llm import get_llm_client
 from ask_shell.executor import ShellExecutor
 
-agent = TaskAgent(
+agent = AskShell(
     llm_client=get_llm_client(),
     executor=ShellExecutor(),
     auto_mode=False
@@ -57,7 +57,7 @@ The agent follows this execution loop:
 ```
 1. Receive task
 2. Analyze and plan
-3. Select appropriate skill (LLM, Browser, PPT, Image, etc.)
+3. Select appropriate skill (Command, Direct LLM, Browser, PPT, Image, WeChat, Feishu, etc.)
 4. Execute skill
 5. Safety check (if command-generating skill)
 6. Get user confirmation (unless auto mode)
@@ -75,10 +75,13 @@ The agent follows this execution loop:
 ```
 TaskAgent
   ├─> SkillManager (select and execute appropriate skills)
-  │   ├─> LLMSkill (command generation, translation, analysis)
+  │   ├─> CommandSkill (command generation, translation, analysis)
+  │   ├─> DirectLLMSkill (direct LLM processing for translation, summaries, etc.)
   │   ├─> BrowserSkill (web automation with Playwright)
   │   ├─> PPTSkill (presentation generation)
   │   ├─> ImageSkill (image generation)
+  │   ├─> WeChatSkill (WeChat automation for macOS)
+  │   ├─> FeishuSkill (Feishu/Lark automation for macOS)
   │   └─> Other skills...
   ├─> LLMClient (generate commands and analyze)
   ├─> ShellExecutor (execute and validate)
@@ -117,14 +120,12 @@ When command execution fails:
 ### Agent Parameters
 
 ```python
-class TaskAgent:
+class AskShell:
     def __init__(
         self,
-        llm_client: LLMClient,
-        executor: ShellExecutor,
-        auto_mode: bool = False,
-        max_retries: int = 3,
-        workdir: Optional[str] = None
+        auto_execute: bool = False,
+        working_dir: Optional[str] = None,
+        direct_mode: bool = False
     ):
         ...
 ```
@@ -142,50 +143,38 @@ class TaskAgent:
 ### Basic Task Execution
 
 ```python
-from ask_shell.agent import TaskAgent
-from ask_shell.llm import get_llm_client
-from ask_shell.executor import ShellExecutor
+from ask_shell.agent import AskShell
 
 # Initialize components
-llm = get_llm_client()
-executor = ShellExecutor()
-agent = TaskAgent(llm, executor)
+agent = AskShell()
 
 # Execute task
-agent.execute_task("find all large files")
+agent.run("find all large files")
 ```
 
 ### With Custom Configuration
 
 ```python
 import os
-from ask_shell.agent import TaskAgent
-from ask_shell.llm import get_llm_client
-from ask_shell.executor import ShellExecutor
+from ask_shell.agent import AskShell
 
 # Custom configuration
 os.environ['MODEL_NAME'] = 'gpt-4'
 
-llm = get_llm_client()
-executor = ShellExecutor()
-
 # Agent with auto mode and custom workdir
-agent = TaskAgent(
-    llm_client=llm,
-    executor=executor,
-    auto_mode=True,
-    max_retries=5,
-    workdir='/path/to/project'
+agent = AskShell(
+    auto_execute=True,
+    working_dir='/path/to/project'
 )
 
-agent.execute_task("run tests")
+agent.run("run tests")
 ```
 
 ### Interactive Session
 
 ```python
 # Start interactive mode
-agent = TaskAgent(llm, executor)
+agent = AskShell()
 agent.run_interactive()
 ```
 
@@ -194,9 +183,13 @@ agent.run_interactive()
 ### Custom Agent Subclass
 
 ```python
-from ask_shell.agent import TaskAgent
+from ask_shell.agent import AskShell
 
-class CustomAgent(TaskAgent):
+class CustomAgent(AskShell):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Custom initialization
+        
     def before_execution(self, command: str):
         """Hook called before command execution"""
         # Log to file
@@ -206,14 +199,14 @@ class CustomAgent(TaskAgent):
     def after_execution(self, result: dict):
         """Hook called after command execution"""
         # Custom result processing
-        if result.get('exit_code') != 0:
+        if result.get('returncode') != 0:
             self.notify_admin(result)
 ```
 
 ### Custom Retry Logic
 
 ```python
-class SmartAgent(TaskAgent):
+class SmartAgent(AskShell):
     def should_retry(self, error: str, attempt: int) -> bool:
         """Custom retry decision logic"""
         # Don't retry authentication errors
@@ -224,8 +217,8 @@ class SmartAgent(TaskAgent):
         if 'connection refused' in error.lower():
             return attempt < 5
         
-        # Default behavior
-        return attempt < self.max_retries
+        # Default behavior - note: AskShell doesn't have max_retries as a property
+        return attempt < 3  # Default max retries
 ```
 
 ## Best Practices
@@ -235,11 +228,8 @@ class SmartAgent(TaskAgent):
 Provide relevant context to improve command generation:
 
 ```python
-# Include git status in context
-result = executor.execute("git status")
-agent.add_context("Git status", result)
-
-agent.execute_task("commit changes")
+# Context is managed automatically by AskShell
+agent.run("commit changes")
 ```
 
 ### 2. Error Handling
@@ -247,16 +237,11 @@ agent.execute_task("commit changes")
 Handle agent exceptions gracefully:
 
 ```python
-from ask_shell.exceptions import ExecutionError, LLMError
-
 try:
-    agent.execute_task(user_input)
-except LLMError as e:
-    print(f"AI service error: {e}")
-    # Fallback to demo mode or retry
-except ExecutionError as e:
-    print(f"Execution failed: {e}")
-    # Log and continue
+    agent.run(user_input)
+except Exception as e:
+    print(f"Task execution failed: {e}")
+    # Handle the error as needed
 ```
 
 ### 3. Resource Cleanup
@@ -267,7 +252,8 @@ Ensure proper cleanup in long-running sessions:
 try:
     agent.run_interactive()
 finally:
-    agent.cleanup()  # Close connections, save state, etc.
+    # Resource cleanup happens automatically
+    pass
 ```
 
 ## API Reference
@@ -275,23 +261,15 @@ finally:
 ### TaskAgent Class
 
 ```python
-class TaskAgent:
+class AskShell:
     """Main task automation agent"""
     
-    def execute_task(self, task: str) -> None:
+    def run(self, task: str) -> None:
         """Execute a single task"""
         pass
     
     def run_interactive(self) -> None:
         """Start interactive mode"""
-        pass
-    
-    def add_context(self, key: str, value: Any) -> None:
-        """Add context information"""
-        pass
-    
-    def clear_context(self) -> None:
-        """Clear conversation context"""
         pass
 ```
 

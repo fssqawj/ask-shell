@@ -34,6 +34,8 @@ dependencies = [
     "playwright>=1.40.0",
     "loguru>=0.7.2",
     "python-pptx>=0.6.23",
+    "flask>=2.0.0",
+    "flask-socketio>=5.0.0",
 ]
 
 [project.urls]
@@ -46,4 +48,4 @@ ask-shell = "ask_shell.cli:main"
 ask = "ask_shell.cli:main"
 
 [tool.setuptools]
-packages = ["ask_shell", "ask_shell.executor", "ask_shell.llm", "ask_shell.models", "ask_shell.ui", "ask_shell.skills"]
+packages = ["ask_shell", "ask_shell.executor", "ask_shell.llm", "ask_shell.models", "ask_shell.ui", "ask_shell.skills", "ask_shell.web"]

@@ -135,4 +135,4 @@ class DirectLLMSkill(BaseSkill):
     
     def get_description(self) -> str:
         """Get skill description"""
-        return "直接处理AI助手，专门处理内容任务（翻译、总结、分析等）"
+        return "直接处理AI助手，专门处理内容任务（翻译、总结、分析等），输入是之前技能的输出的有效文本信息并生成处理后的文本信息"

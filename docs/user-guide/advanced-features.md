@@ -4,10 +4,13 @@ Unlock the full potential of Ask-Shell with these advanced features.
 
 Ask-Shell's architecture is built around a flexible skill system that enables various types of task execution:
 
-- **LLM Skill**: Traditional command generation and text processing
-- **Browser Skill**: Web automation using Playwright
+- **Command Skill**: Traditional command generation and text processing
+- **Direct LLM Skill**: Translation, summarization, and analysis without command execution
+- **Browser Skill**: Web automation using Playwright with anti-bot detection
 - **PPT Skill**: Presentation generation from natural language
 - **Image Skill**: Image generation capabilities
+- **WeChat Skill**: WeChat automation for macOS (GUI automation) - *currently disabled*
+- **Feishu Skill**: Feishu/Lark automation for macOS (GUI automation)
 - **Extensible Skills**: Plugin-ready architecture for adding new capabilities
 
 ## Multi-Step Task Execution

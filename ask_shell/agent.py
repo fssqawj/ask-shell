@@ -5,7 +5,7 @@ from typing import Optional
 from .models.types import TaskContext, TaskStatus, ExecutionResult
 from .executor.shell import ShellExecutor
 from .ui.console import ConsoleUI
-from .skills import SkillManager, CommandSkill, DirectLLMSkill, PPTSkill, ImageSkill, BrowserSkill
+from .skills import SkillManager, CommandSkill, DirectLLMSkill, PPTSkill, ImageSkill, BrowserSkill, WeChatSkill, FeishuSkill
 
 
 class AskShell:
@@ -66,6 +66,14 @@ class AskShell:
         # 注册浏览器自动化技能
         browser_skill = BrowserSkill()
         self.skill_manager.register_skill(browser_skill)
+        
+        # 注册WeChat自动化技能
+        # wechat_skill = WeChatSkill()
+        # self.skill_manager.register_skill(wechat_skill)
+        
+        # 注册Feishu自动化技能
+        feishu_skill = FeishuSkill()
+        self.skill_manager.register_skill(feishu_skill)
         
         # 这里可以继续注册更多技能
         # video_skill = VideoSkill()
