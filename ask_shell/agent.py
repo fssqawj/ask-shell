@@ -36,6 +36,9 @@ class AskShell:
         self.executor = ShellExecutor(working_dir=working_dir)
         self.ui = ConsoleUI()
         
+        # 添加取消标志
+        self.cancelled = False
+        
         # 初始化技能管理器（传递 UI）
         self.skill_manager = SkillManager(ui=self.ui)
         self._register_skills()
@@ -93,6 +96,9 @@ class AskShell:
         context = TaskContext(task_description=task)
         context.status = TaskStatus.RUNNING
         
+        # 重置取消标志
+        self.cancelled = False
+        
         # 显示任务
         self.ui.print_task(task)
         
@@ -117,6 +123,13 @@ class AskShell:
         
         # 主循环：不断调用技能直到任务完成
         while context.status == TaskStatus.RUNNING:
+            # 检查是否被取消
+            if self.cancelled:
+                context.status = TaskStatus.CANCELLED
+                self.skill_manager.reset_all()
+                self.ui.print_cancelled()
+                break
+                
             context.iteration += 1
             self.ui.print_step(context.iteration)
             

@@ -1,8 +1,11 @@
 """数据模型定义"""
 
 from dataclasses import dataclass, field
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from enum import Enum
+
+if TYPE_CHECKING:
+    from ..skills.base_skill import BaseSkill
 
 
 class TaskStatus(Enum):

@@ -15,9 +15,11 @@ try:
     from pptx.util import Inches, Pt
     from pptx.enum.text import PP_ALIGN
     from pptx.dml.color import RGBColor
-    from pptx.enum.shapes import MSO_SHAPE
+    from pptx.enum.shapes import MSO_SHAPE, MSO_AUTO_SHAPE_TYPE
 except ImportError:
     Presentation = None
+    MSO_SHAPE = None
+    MSO_AUTO_SHAPE_TYPE = None
 
 
 class PPTSkill(BaseSkill):
@@ -32,7 +34,7 @@ class PPTSkill(BaseSkill):
     
     def __init__(self):
         super().__init__()
-        self.initialized = Presentation is not None
+        self.initialized = Presentation is not None and MSO_AUTO_SHAPE_TYPE is not None
         self.output_dir = "./output"
         if not os.path.exists(self.output_dir):
             os.makedirs(self.output_dir, exist_ok=True)
@@ -107,7 +109,7 @@ class PPTSkill(BaseSkill):
         if not self.initialized:
             return SkillExecutionResponse(
                 thinking="Checking if required library (python-pptx) is installed",
-                direct_response="Error: python-pptx library is not installed. Please install it using: pip install python-pptx",
+                direct_response="Error: python-pptx library is not installed or incomplete. Please install it using: pip install python-pptx",
                 generated_files=[],
                 file_metadata={"status": "missing_dependency", "required_library": "python-pptx"}
             )
@@ -269,10 +271,7 @@ class PPTSkill(BaseSkill):
             
         # Apply theme and color scheme
         # Use a professional color scheme
-        from pptx.dml.color import RGBColor
-        from pptx.enum.text import PP_ALIGN
-        from pptx.util import Pt, Inches
-        from pptx.enum.shapes import MSO_AUTO_SHAPE_TYPE
+        
             
         # Add title slide with enhanced styling
         title_slide_layout = prs.slide_layouts[0]  # Title Slide layout
@@ -497,6 +496,10 @@ class PPTSkill(BaseSkill):
     def _add_icon_to_slide(self, slide, element):
         """Add an icon or visual element to the slide"""
         try:
+            # Check if required enums are available
+            if MSO_AUTO_SHAPE_TYPE is None:
+                return  # Skip if library not available
+                
             icon_type = element.get("type", "")
             position = element.get("position", "top_left")
             size = element.get("size", "medium")

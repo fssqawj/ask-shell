@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Ask-Shell Web Interface</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-core.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/plugins/autoloader/prism-autoloader.min.js"></script>
     <style>
         * {
             margin: 0;
@@ -125,6 +128,24 @@
         #clear-btn:hover {
             background: #c0392b;
         }
+        
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+        
+        #stop-btn {
+            padding: 8px 16px;
+            background: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        
+        #stop-btn:hover {
+            background: #c0392b;
+        }
 
         #output-container {
             max-height: 600px;
@@ -200,6 +221,49 @@
             overflow-x: auto;
             margin: 10px 0;
             white-space: pre-wrap;
+        }
+        
+        .shell-command {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.9em;
+        }
+        
+        .python-code {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.9em;
+            transition: opacity 0.1s ease-in-out;
+        }
+        
+        .shell-command {
+            background: #2b2b2b;
+            color: #f8f8f2;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: monospace;
+            overflow-x: auto;
+            margin: 10px 0;
+            font-size: 0.9em;
+            transition: opacity 0.1s ease-in-out;
+        }
+        
+        .panel-updating {
+            opacity: 0.8;
+        }
+        
+        .panel-updated {
+            opacity: 1.0;
         }
 
         .thinking-indicator {
@@ -305,7 +369,10 @@
         <section class="output-section">
             <div class="output-header">
                 <h2 class="output-title">Execution Log</h2>
-                <button id="clear-btn">Clear Log</button>
+                <div class="button-group">
+                    <button id="stop-btn" style="background: #e74c3c; display: none;">Stop Task</button>
+                    <button id="clear-btn">Clear Log</button>
+                </div>
             </div>
             <div id="output-container">
                 <div class="loading">
@@ -369,7 +436,7 @@
             }
 
             if (data.command) {
-                content += `<div class="panel"><div class="panel-title">✨ Generated Command</div><div class="command-panel">${escapeHtml(data.command)}</div></div>`;
+                content += `<div class="panel panel-updating"><div class="panel-title">⚙️ Generated Command</div><pre class="shell-command"><code class="language-bash">${escapeHtml(data.command)}</code></pre></div>`;
             }
 
             if (data.explanation) {
@@ -394,6 +461,11 @@
 
             if (content) {
                 addLogEntry('Response Generated', content, 'response-generated');
+                // Apply debounced syntax highlighting
+                debounceSyntaxHighlight();
+                
+                // Always scroll to bottom
+                outputContainer.scrollTop = outputContainer.scrollHeight;
             }
         });
 
@@ -402,14 +474,23 @@
             if (data.session_id !== sessionId) {
                 return;
             }
-            let content = `<strong>Command:</strong> ${escapeHtml(data.command || '(no command)')}<br>`;
-            content += `<strong>Status:</strong> ${data.success ? '<span style="color: green;">SUCCESS</span>' : '<span style="color: red;">FAILED</span>'}<br>`;
+            // Only update if command changed
+            if (!window.lastExecutedCommand || window.lastExecutedCommand !== data.command) {
+                window.lastExecutedCommand = data.command;
+                let content = `<strong>Command:</strong> <pre class="shell-command"><code class="language-bash">${escapeHtml(data.command || '(no command)')}</code></pre><br>`;
+                content += `<strong>Status:</strong> ${data.success ? '<span style="color: green;">SUCCESS</span>' : '<span style="color: red;">FAILED</span>'}<br>`;
 
-            if (data.output && data.output !== '(无输出)') {
-                content += `<div class="command-output">${escapeHtml(data.output)}</div>`;
+                if (data.output && data.output !== '(无输出)') {
+                    content += `<div class="command-output">${escapeHtml(data.output)}</div>`;
+                }
+
+                addLogEntry('Execution Result', content, 'execution-result');
+                // Apply debounced syntax highlighting
+                debounceSyntaxHighlight();
+                
+                // Always scroll to bottom
+                outputContainer.scrollTop = outputContainer.scrollHeight;
             }
-
-            addLogEntry('Execution Result', content, 'execution-result');
         });
 
         socket.on('skill_selected', function(data) {
@@ -439,6 +520,12 @@
                 return;
             }
             addLogEntry('Error', escapeHtml(data.message), 'error-message');
+            
+            // Hide the stop button when there's an error
+            stopBtn.style.display = 'none';
+            
+            // Re-enable submit button
+            submitBtn.disabled = false;
         });
 
         socket.on('warning', function(data) {
@@ -470,6 +557,9 @@
             }
             addLogEntry('Task Completed', content, 'status-completed');
             submitBtn.disabled = false;
+            
+            // Hide the stop button when task completes
+            stopBtn.style.display = 'none';
         });
 
         socket.on('task_cancelled', function(data) {
@@ -479,6 +569,9 @@
             }
             addLogEntry('Task Cancelled', 'Task was cancelled by user', 'status-error');
             submitBtn.disabled = false;
+            
+            // Hide the stop button when task is cancelled
+            stopBtn.style.display = 'none';
         });
 
         socket.on('max_iterations', function(data) {
@@ -488,6 +581,9 @@
             }
             addLogEntry('Max Iterations Reached', `Reached maximum iterations limit: ${data.max_iter}`, 'status-error');
             submitBtn.disabled = false;
+            
+            // Hide the stop button when max iterations reached
+            stopBtn.style.display = 'none';
         });
 
         socket.on('thinking_started', function(data) {
@@ -541,7 +637,7 @@
                 loadingElement.remove();
             }
             
-            // Scroll to bottom
+            // Always scroll to bottom
             outputContainer.scrollTop = outputContainer.scrollHeight;
         });
 
@@ -557,6 +653,17 @@
         let skillSelectionElement = null;
         // Track the current streaming element
         let currentStreamingElement = null;
+        
+        // Debounced syntax highlighter to avoid frequent updates
+        let syntaxHighlightTimeout = null;
+        function debounceSyntaxHighlight() {
+            if (syntaxHighlightTimeout) {
+                clearTimeout(syntaxHighlightTimeout);
+            }
+            syntaxHighlightTimeout = setTimeout(() => {
+                Prism.highlightAll();
+            }, 1000); // Wait 1000ms after last update before highlighting
+        }
 
         socket.on('streaming_update', function(data) {
             // Only process events for this session
@@ -571,7 +678,7 @@
             }
             
             if (data.command) {
-                content += `<div class="panel"><div class="panel-title">✨ Generated Command</div><div class="command-panel">${escapeHtml(data.command)}</div></div>`;
+                content += `<div class="panel panel-updating"><div class="panel-title">⚙️ Generated Command</div><pre class="shell-command"><code class="language-bash">${escapeHtml(data.command)}</code></pre></div>`;
             }
             
             if (data.explanation) {
@@ -595,7 +702,7 @@
             }
             
             if (data.code) {
-                content += `<div class="panel"><div class="panel-title">💻 Generated Code</div><div class="command-panel">${escapeHtml(data.code)}</div></div>`;
+                content += `<div class="panel panel-updating"><div class="panel-title">💻 Generated Code</div><pre class="python-code"><code class="language-python">${escapeHtml(data.code)}</code></pre></div>`;
             }
             
             if (data.outline) {
@@ -636,7 +743,10 @@
                     }
                 }
                 
-                // Scroll to bottom
+                // Apply debounced syntax highlighting
+                debounceSyntaxHighlight();
+                
+                // Always scroll to bottom
                 outputContainer.scrollTop = outputContainer.scrollHeight;
             }
         });
@@ -670,6 +780,10 @@
             
             // Disable button and send task
             submitBtn.disabled = true;
+            
+            // Show the stop button when a task is running
+            stopBtn.style.display = 'block';
+            
             socket.emit('run_task_request', {
                 task: task,
                 session_id: sessionId
@@ -686,6 +800,29 @@
             }
         });
 
+        // Stop task button
+        const stopBtn = document.getElementById('stop-btn');
+        
+        stopBtn.addEventListener('click', function() {
+            // Disable the stop button to prevent multiple clicks
+            stopBtn.disabled = true;
+            stopBtn.textContent = 'Stopping...';
+            
+            // Send stop task request to the server
+            socket.emit('stop_task_request', {
+                session_id: sessionId
+            });
+            
+            // Also show a message that the task is being stopped
+            addLogEntry('Task Stopping', 'Request sent to stop the current task...', 'info-message');
+            
+            // Re-enable the button after a delay
+            setTimeout(() => {
+                stopBtn.disabled = false;
+                stopBtn.textContent = 'Stop Task';
+            }, 2000);
+        });
+        
         // Clear log button
         clearBtn.addEventListener('click', function() {
             outputContainer.innerHTML = '<div class="loading"><span>Log cleared. Enter a task to begin.</span></div>';
@@ -713,7 +850,7 @@
             
             outputContainer.appendChild(entryDiv);
             
-            // Scroll to bottom
+            // Always scroll to bottom
             outputContainer.scrollTop = outputContainer.scrollHeight;
         }
 

@@ -153,6 +153,39 @@ class WebUI:
             thread = threading.Thread(target=run_in_thread)
             thread.daemon = True
             thread.start()
+            
+            # Store thread reference for potential cancellation
+            if not hasattr(self, 'active_threads'):
+                self.active_threads = {}
+            self.active_threads[session_id] = thread
+        
+        @self.socketio.on('stop_task_request')
+        def handle_stop_task_request(data):
+            session_id = data.get('session_id')
+            print(f"DEBUG: Received stop_task_request for session {session_id}")
+            
+            if session_id in self.active_threads:
+                thread = self.active_threads[session_id]
+                # Note: Python threads can't be forcefully stopped, so we'll notify the client
+                # that the request was received and the agent should handle cancellation internally
+                del self.active_threads[session_id]
+                
+                # Emit task cancelled event
+                self.socketio.emit('task_cancelled', {
+                    'session_id': session_id,
+                    'message': 'Task cancellation requested'
+                }, room=session_id)
+                
+                # Attempt to cancel the agent's execution if possible
+                if session_id in self.active_sessions:
+                    agent = self.active_sessions[session_id]
+                    # Set the cancellation flag to stop the agent gracefully
+                    agent.cancelled = True
+            else:
+                self.socketio.emit('info', {
+                    'session_id': session_id,
+                    'message': 'No active task found to stop'
+                }, room=session_id)
     
     def _create_web_ui_wrapper(self, console_ui: ConsoleUI, session_id: str):
         """Create a wrapper around ConsoleUI to emit events to web"""
