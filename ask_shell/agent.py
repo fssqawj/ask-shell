@@ -73,8 +73,8 @@ class AskShell:
         self.skill_manager.register_skill(browser_skill)
         
         # 注册WeChat自动化技能
-        # wechat_skill = WeChatSkill()
-        # self.skill_manager.register_skill(wechat_skill)
+        wechat_skill = WeChatSkill()
+        self.skill_manager.register_skill(wechat_skill)
         
         # 注册Feishu自动化技能
         feishu_skill = FeishuSkill()

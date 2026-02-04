@@ -36,8 +36,27 @@ class WeChatSkill(BaseSkill):
 6. 处理可能的错误情况（如联系人不存在）
 7. 对于中文文本输入，使用剪贴板粘贴方法，避免键盘输入法问题
 
-基本的osascript命令结构：
-osascript -e 'tell application "WeChat" to activate' -e 'delay 2' -e 'tell application "System Events" to tell process "WeChat" to ...'
+基本的osascript命令结构（生成的命令请严格按照示例打开微信应用）：
+osascript -e '
+tell application "System Events"
+    -- 点击 Dock 图标恢复最小化窗口并激活微信
+    tell process "Dock"
+        click (first UI element of list 1 whose name contains "微信" or name contains "WeChat")
+    end tell
+    
+    -- 等待窗口完全恢复并获得焦点
+    delay 1
+    
+    -- 发送 Command + F 打开搜索框
+    keystroke "f" using command down
+    
+    -- 等待搜索框获得焦点（微信搜索框弹出后通常会自动聚焦）
+    delay 0.5
+    
+    -- 发送 Command + V 粘贴并搜索
+    keystroke "v" using command down
+end tell
+'
 
 推荐的操作序列（解决中文输入问题）：
 1. 启动WeChat应用
@@ -50,8 +69,11 @@ osascript -e 'tell application "WeChat" to activate' -e 'delay 2' -e 'tell appli
 8. 通过System Events粘贴消息内容
 9. 按回车发送消息
 
-AppleScript参考：
-- 激活应用: tell application "WeChat" to activate
+AppleScript参考:
+- 激活应用: 
+    tell process "Dock"
+        click (first UI element of list 1 whose name contains "微信" or name contains "WeChat")
+    end tell
 - 延迟: delay 2
 - 与UI元素交互: click button "按钮名" 或 set value of text field 1 to "值"
 - 键盘快捷键: keystroke "k" using command down

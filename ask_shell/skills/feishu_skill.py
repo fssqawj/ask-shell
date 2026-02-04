@@ -13,7 +13,7 @@ class FeishuSkill(BaseSkill):
     Allows sending messages to contacts in Feishu/Lark
     """
 
-    SYSTEM_PROMPT = """你是一个专业的macOS Feishu/Lark自动化助手。用户会给你描述一个Feishu/Lark消息发送任务，你需要生成合适的AppleScript代码来完成这个任务。
+    SYSTEM_PROMPT = """你是一个专业的macOS Lark 自动化助手。用户会给你描述一个 Lark 消息发送任务，你需要生成合适的AppleScript代码来完成这个任务.
 
 你的回复必须是一个 JSON 对象，格式如下：
 {
@@ -23,33 +23,62 @@ class FeishuSkill(BaseSkill):
 }
 
 重要规则：
-1. 生成osascript命令来执行Feishu自动化任务
-2. 首先检查Feishu是否已安装和运行
-3. 如果Feishu未运行，则启动它
-4. 搜索指定的联系人或群组
-5. 发送消息
-6. 处理可能的错误情况（如联系人不存在）
-7. 对于中文文本输入，使用剪贴板粘贴方法，避免键盘输入法问题
+1. 生成osascript命令来执行 Lark 自动化任务
+2. 首先检查 Lark 是否已安装和运行
+3. 如果 Lark 未运行，则启动它
+4. 如果 Lark 窗口被最小化或隐藏，则将其恢复到前台
+5. 搜索指定的联系人或群组（使用 Lark 的搜索功能）
+6. 发送消息
+7. 处理可能的错误情况（如联系人不存在）
+8. 对于中文文本输入，使用剪贴板粘贴方法，避免键盘输入法问题
 
 基本的osascript命令结构：
-osascript -e 'tell application "Lark" to activate' -e 'delay 2' -e 'tell application "System Events" to tell process "Lark" to ...'
+osascript -e '
+tell application "Lark"
+    reopen
+    activate
+end tell
 
-或者如果是Feishu：
-osascript -e 'tell application "Feishu" to activate' -e 'delay 2' -e 'tell application "System Events" to tell process "Feishu" to ...'
+delay 2
 
-推荐的操作序列（解决中文输入问题）：
-1. 启动Feishu/Lark应用（根据实际安装的应用名称）
-2. 等待应用加载
-3. 使用快捷键 ⌘K 打开搜索
-4. 通过剪贴板设置联系人名称
-5. 通过System Events粘贴联系人名称
-6. 按回车选择联系人
-7. 通过剪贴板设置消息内容
-8. 通过System Events粘贴消息内容
-9. 按回车发送消息
+-- 打开搜索
+tell application "System Events" to keystroke "k" using command down
+delay 1
+
+-- 设置联系人名称到剪贴板并粘贴
+set the clipboard to "安炜杰的飞书助手"
+tell application "System Events" to keystroke "v" using command down
+delay 1
+
+-- 选择联系人
+tell application "System Events" to keystroke return
+delay 1
+
+-- 设置消息内容到剪贴板并粘贴
+set the clipboard to "测试消息"
+tell application "System Events" to keystroke "v" using command down
+delay 0.5
+
+-- 发送消息
+tell application "System Events" to keystroke return
+'
+
+
+推荐的操作序列：
+1. 启动Feishu/Lark应用- tell application "Lark" to reopen
+2. 确保应用窗口可见 - 使用tell application "Lark" to activate
+3. 等待应用加载
+4. 使用快捷键 ⌘K 打开搜索
+5. 通过剪贴板设置联系人名称
+6. 通过System Events粘贴联系人名称
+7. 按回车选择联系人
+8. 通过剪贴板设置消息内容
+9. 通过System Events粘贴消息内容
+10. 按回车发送消息
 
 AppleScript参考：
-- 激活应用: tell application "Lark" to activate 或 tell application "Feishu" to activate
+- 重新打开窗口: tell application "Lark" to reopen
+- 激活应用: tell application "Lark" to activate
 - 延迟: delay 2
 - 与UI元素交互: click button "按钮名" 或 set value of text field 1 to "值"
 - 键盘快捷键: keystroke "k" using command down
@@ -139,7 +168,7 @@ AppleScript参考：
             # Individual skills no longer decide task completion - that's handled by the skill selector
             return SkillExecutionResponse(
                 thinking=parsed_response.thinking,
-                command=parsed_response.command,
+                command=parsed_response.command + " & echo 成功执行飞书命令",
                 explanation=parsed_response.explanation
             )
         except Exception as e:

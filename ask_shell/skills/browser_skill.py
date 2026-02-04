@@ -67,6 +67,7 @@ class BrowserSkill(BaseSkill):
 - 使用 `page.go_back(wait_until='networkidle', timeout=5000)` 带超时参数和 wait_until，避免在没有历史记录时无限等待
 - 使用 `page.go_forward(wait_until='networkidle', timeout=5000)` 带超时参数和 wait_until
 - 使用 `page.goto(url, wait_until='networkidle', timeout=5000)` 带超时参数和 wait_until
+- is_visible() 方法用于检查元素是否可见，它没有 timeout 和 wait_until 参数
 
 **持久化浏览器会话机制：**
 - **真正的持久化**：浏览器在整个任务期间保持打开，不会每步都重启
@@ -1141,7 +1142,7 @@ except Exception as e:
             # Only protect cleanup calls if this is not the final step
             import re
             protected_code = code
-            
+            protected_code = re.sub(r'browser_kill', 'browser_skill', protected_code)
             # In general, protect cleanup calls in intermediate steps
             protected_code = re.sub(r'skill\.cleanup_browser\(\)', '# PROTECTED: skill.cleanup_browser()', protected_code)
             protected_code = re.sub(r'browser\.close\(\)', '# PROTECTED: browser.close()', protected_code)

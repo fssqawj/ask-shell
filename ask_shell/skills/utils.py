@@ -1,4 +1,3 @@
-
 from typing import List, Optional
 
 from ask_shell.memory.bank import MemoryBank

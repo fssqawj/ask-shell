@@ -3,7 +3,7 @@
 from typing import List
 from .types import MemoryEntry, MemorySummary
 from ..llm.openai_client import OpenAIClient
-
+from ..models.types import Message
 
 class MemoryCompressor:
     """
