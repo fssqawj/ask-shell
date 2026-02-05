@@ -17,16 +17,6 @@ class TaskStatus(Enum):
     CANCELLED = "cancelled"
 
 
-class SkillCapability(Enum):
-    """Types of capabilities a skill can provide"""
-    COMMAND_GENERATION = "command_generation"  # Generate and execute shell commands
-    LLM_PROCESSING = "llm_processing"  # Process content with LLM (translate, summarize, etc.)
-    FILE_GENERATION = "file_generation"  # Generate files (PPT, images, videos, etc.)
-    WEB_INTERACTION = "web_interaction"  # Interact with web services/APIs
-    DATA_ANALYSIS = "data_analysis"  # Analyze and visualize data
-    GUI_AUTOMATION = "gui_automation"  # Automate GUI applications (e.g., WeChat, desktop apps)
-
-
 @dataclass
 class SkillSelectResponse:
     skill_name: str = ""

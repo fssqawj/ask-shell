@@ -5,7 +5,7 @@ from dataclasses import dataclass
 from typing import Optional, List, Dict, Any
 from enum import Enum
 
-from ask_shell.models.types import SkillExecutionResponse, SkillCapability
+from ask_shell.models.types import SkillExecutionResponse
 
 
 class BaseSkill(ABC):
@@ -21,7 +21,7 @@ class BaseSkill(ABC):
         self.capabilities = self.get_capabilities()
     
     @abstractmethod
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """
         Return list of capabilities this skill provides
         

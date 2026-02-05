@@ -6,7 +6,7 @@ import json
 from loguru import logger
 from datetime import datetime
 from typing import List, Optional, Dict, Any, Callable
-from .base_skill import BaseSkill, SkillExecutionResponse, SkillCapability
+from .base_skill import BaseSkill, SkillExecutionResponse
 from ..llm.base import BaseLLMClient
 from ..llm.openai_client import OpenAIClient
 from ..skills.utils import build_full_history_message
@@ -81,9 +81,9 @@ class PPTSkill(BaseSkill):
             print(f"Warning: LLM initialization failed: {str(e)}. PPT skill will use basic functionality.")
             self.llm_available = False
     
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """PPT skill provides file generation capability"""
-        return [SkillCapability.FILE_GENERATION]
+        return ["file_generation"]
     
     def execute(
         self,

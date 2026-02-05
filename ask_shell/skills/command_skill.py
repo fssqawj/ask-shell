@@ -2,7 +2,7 @@
 
 import json
 from typing import List, Optional, Dict, Any, Callable
-from .base_skill import BaseSkill, SkillExecutionResponse, SkillCapability
+from .base_skill import BaseSkill, SkillExecutionResponse
 from ..llm.base import BaseLLMClient
 from ..llm.openai_client import OpenAIClient
 from ..skills.utils import build_full_history_message
@@ -70,10 +70,10 @@ class CommandSkill(BaseSkill):
         super().__init__()
         self.llm: BaseLLMClient = OpenAIClient()
     
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """Command skill provides command generation capability"""
         return [
-            SkillCapability.COMMAND_GENERATION
+            "command_generation"
         ]
     
     def execute(

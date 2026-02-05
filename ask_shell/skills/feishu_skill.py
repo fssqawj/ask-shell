@@ -3,7 +3,7 @@
 import subprocess
 import json
 from typing import List, Optional, Dict, Any, Callable
-from .base_skill import BaseSkill, SkillExecutionResponse, SkillCapability
+from .base_skill import BaseSkill, SkillExecutionResponse
 from ..skills.utils import build_full_history_message
 
 
@@ -102,10 +102,10 @@ AppleScript参考：
         from ..llm.openai_client import OpenAIClient
         self.llm = OpenAIClient()
 
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """Feishu skill provides GUI automation capability for Feishu messaging"""
         return [
-            SkillCapability.GUI_AUTOMATION  # GUI automation for Feishu
+            "gui_automation"  # GUI automation for Feishu
         ]
 
     def execute(

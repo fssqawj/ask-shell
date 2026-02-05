@@ -1,7 +1,7 @@
 """Image Generation Skill - Create images using AI"""
 
 from typing import List, Optional, Dict, Any
-from .base_skill import BaseSkill, SkillExecutionResponse, SkillCapability
+from .base_skill import BaseSkill, SkillExecutionResponse
 
 
 class ImageSkill(BaseSkill):
@@ -28,9 +28,9 @@ class ImageSkill(BaseSkill):
         # TODO: Initialize image generation API (DALL-E, Stable Diffusion, etc.)
         self.initialized = False
     
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """Image skill provides file generation capability"""
-        return [SkillCapability.FILE_GENERATION]
+        return ["file_generation", "image_generation"]
     
     def execute(
         self,

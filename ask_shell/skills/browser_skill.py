@@ -4,7 +4,7 @@ from typing import Optional, List, Dict, Any
 import time
 from bs4 import BeautifulSoup, Tag
 from loguru import logger
-from .base_skill import BaseSkill, SkillCapability, SkillExecutionResponse
+from .base_skill import BaseSkill, SkillExecutionResponse
 from ..models.types import BrowserSkillResponse
 
 from ..llm.openai_client import OpenAIClient
@@ -881,9 +881,9 @@ except Exception as e:
         # Clear operation history
         self.clear_operation_history()
     
-    def get_capabilities(self) -> List[SkillCapability]:
+    def get_capabilities(self) -> List[str]:
         """Return browser automation capability"""
-        return [SkillCapability.WEB_INTERACTION]
+        return ["web_interaction", "web_automation", "browser_control"]
     
     def get_description(self) -> str:
         """Get description of this skill"""

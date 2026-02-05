@@ -4,7 +4,7 @@ This module provides a flexible skill system that allows the agent to have
 various capabilities beyond just shell command generation.
 """
 
-from .base_skill import BaseSkill, SkillCapability
+from .base_skill import BaseSkill
 from .skill_manager import SkillManager
 from .skill_selector import SkillSelector
 from .command_skill import CommandSkill
@@ -17,12 +17,13 @@ from .feishu_skill import FeishuSkill
 
 __all__ = [
     'BaseSkill', 
-    'SkillCapability', 
     'SkillManager',
     'SkillSelector',
     'CommandSkill',
     'DirectLLMSkill',
     'PPTSkill',
     'ImageSkill',
-    'BrowserSkill'
+    'BrowserSkill',
+    'WeChatSkill',
+    'FeishuSkill'
 ]

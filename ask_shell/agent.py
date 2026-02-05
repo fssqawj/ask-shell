@@ -1,12 +1,11 @@
 """Ask-Shell 核心逻辑"""
 
-from dataclasses import dataclass, field
-from typing import Optional, List
+from typing import Optional
 
 from .models.types import TaskStatus, ExecutionResult
 from .executor.shell import ShellExecutor
 from .ui.console import ConsoleUI
-from .skills import SkillManager, CommandSkill, DirectLLMSkill, PPTSkill, ImageSkill, BrowserSkill, WeChatSkill, FeishuSkill
+from .skills import SkillManager
 from .context.task_context import TaskContext
 
 
@@ -21,7 +20,8 @@ class AskShell:
         self,
         auto_execute: bool = False,
         working_dir: Optional[str] = None,
-        direct_mode: bool = False
+        direct_mode: bool = False,
+        enable_persistence: bool = True
     ):
         """
         初始化 Agent
@@ -30,6 +30,7 @@ class AskShell:
             auto_execute: 是否自动执行命令（不需要用户确认）
             working_dir: 工作目录
             direct_mode: 是否强制使用直接LLM模式（翻译、总结等任务）
+            enable_persistence: 是否启用技能持久化
         """
         self.auto_execute = auto_execute
         self.force_direct_mode = direct_mode
@@ -41,48 +42,8 @@ class AskShell:
         # 添加取消标志
         self.cancelled = False
         
-        # 初始化技能管理器（传递 UI）
-        self.skill_manager = SkillManager(ui=self.ui)
-        self._register_skills()
-    
-    def _register_skills(self):
-        """注册所有可用技能"""
-        # 注册命令生成技能（默认技能）
-        command_skill = CommandSkill()
-        self.skill_manager.register_skill(command_skill, is_default=True)
-        
-        # 将LLM客户端传递给SkillManager以支持智能选择
-        if hasattr(command_skill, 'llm'):
-            from .skills import SkillSelector
-            self.skill_manager.skill_selector = SkillSelector(command_skill.llm)
-        
-        # 注册直接LLM处理技能
-        direct_llm_skill = DirectLLMSkill()
-        self.skill_manager.register_skill(direct_llm_skill)
-        
-        # 注册PPT生成技能
-        ppt_skill = PPTSkill()
-        self.skill_manager.register_skill(ppt_skill)
-        
-        # 注册图片生成技能
-        image_skill = ImageSkill()
-        self.skill_manager.register_skill(image_skill)
-        
-        # 注册浏览器自动化技能
-        browser_skill = BrowserSkill()
-        self.skill_manager.register_skill(browser_skill)
-        
-        # 注册WeChat自动化技能
-        wechat_skill = WeChatSkill()
-        self.skill_manager.register_skill(wechat_skill)
-        
-        # 注册Feishu自动化技能
-        feishu_skill = FeishuSkill()
-        self.skill_manager.register_skill(feishu_skill)
-        
-        # 这里可以继续注册更多技能
-        # video_skill = VideoSkill()
-        # self.skill_manager.register_skill(video_skill)
+        # 初始化技能管理器（传递 UI 和 persistence 配置）
+        self.skill_manager = SkillManager(ui=self.ui, enable_persistence=enable_persistence)
     
     def run(self, task: str) -> TaskContext:
         """

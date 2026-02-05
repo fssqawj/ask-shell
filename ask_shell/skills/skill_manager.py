@@ -1,9 +1,19 @@
 """Skill Manager for routing tasks to appropriate skills"""
+import os
 from loguru import logger
 from typing import List, Optional, Dict, Any, TYPE_CHECKING
 from .skill_selector import SkillSelector
 from .base_skill import BaseSkill
 from ..models.types import SkillSelectResponse, SkillResponse
+from .command_skill import CommandSkill
+from .direct_llm_skill import DirectLLMSkill
+from .image_skill import ImageSkill
+from .ppt_skill import PPTSkill
+from .browser_skill import BrowserSkill
+from .wechat_skill import WeChatSkill
+from .feishu_skill import FeishuSkill
+from .skill_generator import SkillGenerator
+from .skill_persistence import SkillPersistence
 
 if TYPE_CHECKING:
     from ..ui.console import ConsoleUI
@@ -20,30 +30,85 @@ class SkillManager:
     4. Manages skill lifecycle (reset, etc.)
     """
     
-    def __init__(self, llm_client=None, ui=None):
+    def __init__(self, ui=None, enable_persistence: bool = True):
         """
         Initialize SkillManager
         
         Args:
             llm_client: LLM client for intelligent skill selection
             ui: ConsoleUI instance for displaying selection process
+            enable_persistence: Whether to enable skill persistence
         """
         self.skills: List[BaseSkill] = []
         self.default_skill: Optional[BaseSkill] = None
-        self.skill_selector = SkillSelector(llm_client) if llm_client else None
+        self.skill_selector = SkillSelector()
         self.ui = ui
+        self.enable_persistence = enable_persistence
+        if enable_persistence:
+            self.persistence = SkillPersistence()
+        else:
+            self.persistence = None
+        self.register_skill()
+        self.register_dynamic_skill()
     
-    def register_skill(self, skill: BaseSkill, is_default: bool = False):
-        """
-        Register a new skill
+    def register_skill(self):
+        """注册所有可用技能"""
+        # 注册命令生成技能（默认技能）
+        command_skill = CommandSkill()
+        self.skills.append(command_skill)
+        self.default_skill = command_skill
+
+        # 注册直接LLM处理技能
+        direct_llm_skill = DirectLLMSkill()
+        self.skills.append(direct_llm_skill)
         
-        Args:
-            skill: The skill instance to register
-            is_default: If True, this skill will be used as fallback
-        """
-        self.skills.append(skill)
-        if is_default:
-            self.default_skill = skill
+        # 注册PPT生成技能
+        ppt_skill = PPTSkill()
+        self.skills.append(ppt_skill)
+        
+        # 注册图片生成技能
+        image_skill = ImageSkill()
+        self.skills.append(image_skill)
+        
+        # 注册浏览器自动化技能
+        browser_skill = BrowserSkill()
+        self.skills.append(browser_skill)
+        
+        # 注册WeChat自动化技能
+        wechat_skill = WeChatSkill()
+        self.skills.append(wechat_skill)
+        
+        # 注册Feishu自动化技能
+        feishu_skill = FeishuSkill()
+        self.skills.append(feishu_skill)
+    
+    def register_dynamic_skill(self):
+        """Register dynamic skills"""
+        skill_generator = SkillGenerator(enable_persistence=self.enable_persistence)
+        custom_skills_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "custom_skills")
+        logger.info(f"Load custom skills from directory: {custom_skills_dir}")
+        
+        for file_name in os.listdir(custom_skills_dir):
+            if file_name.endswith(".md"):
+                skill_name = file_name[:-3]
+                
+                # Try to load from persisted Python file first
+                skill = None
+                if self.enable_persistence and self.persistence:
+                    if self.persistence.skill_exists(skill_name):
+                        skill_class = self.persistence.load_skill_class(skill_name)
+                        if skill_class:
+                            skill = skill_class()
+                            logger.info(f"Loaded skill '{skill_name}' from persisted file")
+                
+                # If not loaded from file, generate from markdown
+                if skill is None:
+                    file_content = open(os.path.join(custom_skills_dir, file_name), "r", encoding="utf-8").read()
+                    skill = skill_generator.parse_markdown_to_skill(file_content, skill_name)
+                    logger.info(f"Generated skill '{skill_name}' from markdown")
+                
+                logger.info(f"Registering dynamic skill:\n {skill.name=}\n, {skill.get_description()=}\n, {skill.get_capabilities()=}\n")
+                self.skills.append(skill)
     
     def select_skill(self, task: str, context: Optional[Dict[str, Any]] = None) -> Optional[SkillSelectResponse]:
         """
@@ -69,7 +134,7 @@ class SkillManager:
                     skill_name=selected_skill.name,
                     confidence=confidence,
                     reasoning=reasoning,
-                    capabilities=[c.value for c in selected_skill.capabilities]
+                    capabilities=selected_skill.capabilities
                 )
                 return SkillSelectResponse(skill=selected_skill, skill_name=selected_skill.name, task_complete=task_complete, select_reason=reasoning)
         except Exception as e:

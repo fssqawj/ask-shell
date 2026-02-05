@@ -4,7 +4,7 @@
 import argparse
 import sys
 from dotenv import load_dotenv
-
+from loguru import logger
 from ask_shell import AskShell
 
 
@@ -56,6 +56,11 @@ def main():
         action="store_true",
         help="启动Web界面"
     )
+    parser.add_argument(
+        "--no-persistence",
+        action="store_true",
+        help="禁用技能持久化（不保存生成的技能到文件）"
+    )
     
     args = parser.parse_args()
     
@@ -74,11 +79,11 @@ def main():
             agent = AskShell(
                 auto_execute=args.auto,
                 working_dir=args.workdir,
-                direct_mode=args.llm
+                direct_mode=args.llm,
+                enable_persistence=not args.no_persistence
             )
         except Exception as e:
-            print(f"错误: 初始化失败 - {e}")
-            print("提示: 请确保已配置 OPENAI_API_KEY")
+            logger.opt(exception=e).error("初始化失败")
             sys.exit(1)
         
         # 运行

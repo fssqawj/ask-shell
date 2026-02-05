@@ -4,6 +4,8 @@ import json
 from typing import List, Optional, Dict, Any
 
 from loguru import logger
+
+from ask_shell.llm.openai_client import OpenAIClient
 from .base_skill import BaseSkill
 from ..models.types import ExecutionResult
 from .utils import build_full_history_message
@@ -37,7 +39,7 @@ class SkillSelector:
 1. 仔细分析任务的本质需求，和当前任务的进展情况
 2. 优先选择最专业的技能（例如：创建PPT就选PPTSkill，生成图片就选ImageSkill）
 3. 需要执行shell命令时，选择CommandSkill
-4. 需要直接处理内容（翻译、总结、分析等）时，选择DirectLLMSkill
+4. 需要直接处理文本（翻译、总结、分析等）时，选择DirectLLMSkill
 5. confidence 应该反映你对选择的确信程度（0.0-1.0）
 6. 如果任务已经完成，设置task_complete为true，selected_skill为null或空字符串
 8. 参考之前的执行历史（包括思考过程和下一步计划）来做出更好的选择
@@ -50,14 +52,14 @@ class SkillSelector:
 当前执行上下文：
 {context}"""
 
-    def __init__(self, llm_client):
+    def __init__(self):
         """
         Initialize skill selector
         
         Args:
             llm_client: LLM client for intelligent selection
         """
-        self.llm = llm_client
+        self.llm = OpenAIClient()
     
     def select_skill(
         self,
@@ -122,10 +124,9 @@ class SkillSelector:
         """Build formatted description of all available skills"""
         descriptions = []
         for i, skill in enumerate(skills, 1):
-            capabilities = [c.value for c in skill.capabilities]
             descriptions.append(
                 f"{i}. **{skill.name}**\n"
-                f"   - 能力: {', '.join(capabilities)}\n"
+                f"   - 能力: {', '.join(skill.get_capabilities())}\n"
                 f"   - 描述: {skill.get_description()}\n"
             )
         return "\n".join(descriptions)
