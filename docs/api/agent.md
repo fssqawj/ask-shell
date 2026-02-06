@@ -82,8 +82,10 @@ TaskAgent
   │   ├─> ImageSkill (image generation)
   │   ├─> WeChatSkill (WeChat automation for macOS)
   │   ├─> FeishuSkill (Feishu/Lark automation for macOS)
+  │   ├─> Dynamic Skills (auto-generated from markdown with persistent storage)
   │   └─> Other skills...
   ├─> LLMClient (generate commands and analyze)
+  ├─> MemoryBank (contextual memory for learning from previous steps)
   ├─> ShellExecutor (execute and validate)
   └─> Console (user interaction and display)
 ```
@@ -278,4 +280,6 @@ class AskShell:
 - [LLM Client API](llm.md)
 - [Executor API](executor.md)
 - [UI Components](ui.md)
+- [Memory System API](memory.md)
+- [Skills System API](skills.md)
 - [Architecture Overview](../development/architecture.md)

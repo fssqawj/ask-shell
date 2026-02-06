@@ -48,6 +48,9 @@ Ask-Shell is an **AI-powered task automation agent** that goes beyond simple com
 - 🤖 **Autonomous Task Agent** - Not just command generation, but complete task execution
 - 🔄 **Smart Retry Loop** - Automatically recovers from failures and tries alternatives
 - 💭 **Transparent AI Thinking** - Real-time display of AI's reasoning process
+- 🧠 **Memory Mechanism** - Contextual memory bank for learning from previous steps
+- 🧩 **Auto-Generated Skills** - Skills automatically created from markdown and persisted as Python files
+- 💡 **Hints System** - Contextual guidance for improved execution quality
 - 🎨 **Beautiful Interface** - Rich terminal output with animations and syntax highlighting
 - 🔒 **Safety First** - Intelligent danger detection with user confirmation
 - 🎯 **Multiple Modes** - Single execution, interactive mode, and auto mode
@@ -64,6 +67,7 @@ Ask-Shell is an **AI-powered task automation agent** that goes beyond simple com
 - [Quick Start Tutorial](getting-started/quick-start.md)
 - [Configuration Options](getting-started/configuration.md)
 - [Usage Examples](user-guide/examples.md)
+- [Advanced Features](user-guide/advanced-features.md)
 - [Safety Features](user-guide/safety.md)
 
 ## Demo Videos

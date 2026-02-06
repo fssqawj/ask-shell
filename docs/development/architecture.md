@@ -4,52 +4,120 @@ Understanding Ask-Shell's design and architecture.
 
 ## High-Level Overview
 
-Ask-Shell follows a modular, layered architecture with a flexible skill system:
+Ask-Shell follows a modular, layered architecture with a flexible skill system. The following diagram shows the main components and their relationships:
 
+```mermaid
+graph TB
+    subgraph "User Interface"
+        UI[Console UI/Web Interface]
+    end
+    
+    subgraph "Agent Layer"
+        AGENT[AskShell Agent]
+    end
+    
+    subgraph "Skills System"
+        SM[Skill Manager]
+        SS[Skill Selector]
+        SG[Skill Generator]
+        SP[Skill Persistence]
+        S1[Command Skill]
+        S2[Direct LLM Skill]
+        S3[Browser Skill]
+        S4[PPT Skill]
+        S5[Image Skill]
+        S6[WeChat Skill]
+        S7[Feishu Skill]
+        SN[Dynamic Skills]
+    end
+    
+    subgraph "Memory System"
+        MB[Memory Bank]
+        MT[Memory Types]
+    end
+    
+    subgraph "LLM Layer"
+        LLM[OpenAI Client]
+    end
+    
+    subgraph "Executor"
+        EXEC[Shell Executor]
+    end
+    
+    subgraph "Context Management"
+        CT[Task Context]
+    end
+
+    %% User Interface connections
+    UI --> AGENT
+    
+    %% Agent connections
+    AGENT --> SM
+    AGENT --> EXEC
+    AGENT --> CT
+    AGENT --> UI
+    
+    %% Skill Manager connections
+    SM --> SS
+    SM --> SG
+    SM --> SP
+    SM --> S1
+    SM --> S2
+    SM --> S3
+    SM --> S4
+    SM --> S5
+    SM --> S6
+    SM --> S7
+    SM --> SN
+    
+    %% Context and memory connections
+    CT --> MB
+    AGENT --> CT
+    
+    %% Memory connections
+    MB --> MT
+    CT --> MB
+    SS --> MB
+    
+    %% LLM connections
+    LLM --> SS
+    LLM --> SG
+    LLM --> S1
+    LLM --> S2
+    LLM --> S3
+    LLM --> S4
+    LLM --> S5
+    LLM --> S6
+    LLM --> S7
+    LLM --> SN
+    
+    %% Executor connections
+    EXEC --> AGENT
+    
+    %% Skill dependencies
+    S1 --> LLM
+    S2 --> LLM
+    S3 --> LLM
+    S4 --> LLM
+    S5 --> LLM
+    S6 --> LLM
+    S7 --> LLM
+    SN --> LLM
+    SG --> SP
+    
+    %% Styling
+    classDef agentStyle fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef skillStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    classDef memoryStyle fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef llmStyle fill:#fff3e0,stroke:#e65100,stroke-width:2px
+    
+    class AGENT,CT agentStyle
+    class SM,SS,SG,SP,S1,S2,S3,S4,S5,S6,S7,SN skillStyle
+    class MB,MT memoryStyle
+    class LLM llmStyle
 ```
-┌─────────────────────────────────────────────────┐
-│              CLI Interface                      │
-│           (ask_shell/cli.py)                    │
-└──────────────────┬──────────────────────────────┘
-                   │
-┌──────────────────▼──────────────────────────────┐
-│              Task Agent Layer                   │
-│            (ask_shell/agent.py)                 │
-│  ┌─────────────────────────────────────────┐    │
-│  │  Task Execution Loop                    │    │
-│  │  - Analyze task                         │    │
-│  │  - Select appropriate skill             │    │
-│  │  - Generate commands/responses          │    │
-│  │  - Handle errors                        │    │
-│  │  - Manage context                       │    │
-│  └─────────────────────────────────────────┘    │
-└─────────┬─────────────────────┬─────────────────┘
-          │                     │
-    ┌─────▼─────┐        ┌──────▼─────────────────┐
-    │ Skill     │        │  Core Components       │
-    │ System    │        │                        │
-    │           │        │  ┌───────────────────┐ │
-    │  ┌────────▼───┐    │  │  LLM Client       │ │
-    │  │ LLMSkill   │    │  │  (llm/*.py)       │ │
-    │  │ PPTSkill   │    │  │  - OpenAI API     │ │
-    │  │ ImageSkill │────┼─▶│  - Streaming      │ │
-    │  │ BrowserSkill│   │  │  - Context mgmt   │ │
-    │  │ ...        │    │  └───────────────────┘ │
-    │  └────────────┘    │  ┌───────────────────┐ │
-    └────────────────────┼─▶│  Shell Executor   │ │
-                         │  │ (executor/*.py) │ │
-                         │  │  - Command exec   │ │
-                         │  │  - Safety check   │ │
-                         │  │  - Result parse   │ │
-                         │  └───────────────────┘ │
-                         │  ┌───────────────────┐ │
-                         └─▶│  UI Components    │ │
-                            │   (ui/console.py) │ │
-                            │  - Rich display   │ │
-                            │  - User prompts   │ │
-                            │  - Progress anim  │ │
-                            └───────────────────┘
-```
+
+The architecture consists of several key components:
 
 ## Core Components
 
@@ -435,4 +503,6 @@ ask-shell/
 
 - [View Agent API documentation](../api/agent.md)
 - [Understand LLM integration](../api/llm.md)
+- [Explore Memory System API](../api/memory.md)
+- [Discover Skills System API](../api/skills.md)
 - [Learn about contributing](contributing.md)

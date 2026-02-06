@@ -1,3 +1,8 @@
+[![PyPI version](https://img.shields.io/pypi/v/askshell-ai.svg)](https://pypi.org/project/askshell-ai/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
+[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://fssqawj.github.io/ask-shell/)
+
 # Ask-Shell
 
 <p align="center">
@@ -17,11 +22,6 @@
 <p align="center">
   <em>Multi-step execution • Auto-retry on failure • Real-time thinking display</em>
 </p>
-
-[![PyPI version](https://img.shields.io/pypi/v/askshell-ai.svg)](https://pypi.org/project/askshell-ai/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
-[![Python 3.7+](https://img.shields.io/badge/python-3.7+-blue.svg)](https://www.python.org/downloads/)
-[![Documentation](https://img.shields.io/badge/docs-mkdocs-blue)](https://fssqawj.github.io/ask-shell/)
 
 ---
 
@@ -103,6 +103,7 @@ Ask-Shell features a flexible skill system that enables various types of task ex
 - **Image Skill**: AI image generation capabilities
 - **WeChat Skill**: WeChat automation for macOS (GUI automation) - *currently disabled*
 - **Feishu Skill**: Feishu/Lark automation for macOS (GUI automation)
+- **Dynamic Skills**: Auto-generated from markdown descriptions with persistent storage
 - **Extensible Skills**: Plugin-ready architecture for adding new capabilities
 
 ## 🌐 Web Interface
@@ -112,6 +113,22 @@ Ask-Shell also provides a web interface for convenient access:
 ```bash
 ask --web  # Starts the web server at http://localhost:5000
 ```
+
+## 🧠 Advanced Features
+
+Ask-Shell includes several advanced features that enhance its task automation capabilities:
+
+### Memory Mechanism
+The system maintains a contextual memory bank that stores execution history, enabling the AI to learn from previous steps and make informed decisions for subsequent actions. This allows for more coherent and context-aware task execution.
+
+### Auto-Generated Persistent Skills
+Skills can be automatically generated from markdown descriptions and persistently stored as Python files. This allows for rapid skill creation and reuse without manual coding, expanding the system's capabilities dynamically.
+
+### Skill Hints System
+Skills can utilize contextual hints to improve their execution quality. The hints system provides domain-specific guidance and best practices that help skills perform more effectively in complex scenarios.
+
+### Execution History Learning
+The system learns from successful execution steps, extracting valuable patterns and techniques that can be applied to similar future tasks, continuously improving its performance.
 
 Ask-Shell provides a beautiful terminal interface with real-time feedback:
 
