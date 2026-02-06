@@ -69,7 +69,7 @@ class ShellExecutor:
             return ExecutionResult(
                 command=command,
                 returncode=result.returncode,
-                stdout=result.stdout,
+                stdout=result.stdout if result.stdout else "成功执行命令",
                 stderr=result.stderr
             )
         except subprocess.TimeoutExpired:

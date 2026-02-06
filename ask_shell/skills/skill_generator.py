@@ -66,6 +66,8 @@ Please return a JSON object with the following structure:
     "system_prompt": "system prompt for the LLM to guide the skill's behavior. It should include the skill's function, usage method and examples in the skill description, as well as the output JSON format, precautions, etc. (if these contents are available)."
 }}
 
+capabilities will generate only 1-2 of the most accurate skill tags.
+
 Focus on extracting accurate information about what the skill should do based on the description and examples."""
         
         try:
@@ -151,7 +153,7 @@ Focus on extracting accurate information about what the skill should do based on
                     
                     return SkillExecutionResponse(
                         thinking=llm_response.thinking,
-                        command=llm_response.command + " & echo 命令执行成功",
+                        command=llm_response.command,
                         explanation=llm_response.explanation,
                         next_step=llm_response.next_step,
                         is_dangerous=llm_response.is_dangerous,

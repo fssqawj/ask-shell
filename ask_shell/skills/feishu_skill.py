@@ -168,7 +168,7 @@ AppleScript参考：
             # Individual skills no longer decide task completion - that's handled by the skill selector
             return SkillExecutionResponse(
                 thinking=parsed_response.thinking,
-                command=parsed_response.command + " & echo 成功执行飞书命令",
+                command=parsed_response.command,
                 explanation=parsed_response.explanation
             )
         except Exception as e:

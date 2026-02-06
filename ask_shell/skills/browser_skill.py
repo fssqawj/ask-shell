@@ -845,10 +845,17 @@ except Exception as e:
         return cleaned_html
 
     @classmethod
+    def get_current_page(cls):
+        """Get the current page content"""
+        cls._try_connect_to_existing_browser()
+        if not cls._browser_page:
+            logger.warning("浏览器页面未初始化，无法获取当前页面")
+            return None
+        return cls._browser_page
+    
+    @classmethod
     def get_current_page_structure(cls) -> str:
         """Get the current page structure optimized for LLM-driven automation (low token, high usability)"""
-
-        cls._try_connect_to_existing_browser()
 
         if not cls._browser_page:
             return "浏览器页面未初始化，无法获取页面结构"
@@ -914,13 +921,19 @@ except Exception as e:
         # Get the reasoning for why this skill was selected (though browser skill doesn't modify its behavior based on this)
         selection_reasoning = kwargs.get('selection_reasoning', '')
         
+        self.get_current_page()
+
         # Build context information
         context_info = self._build_context_info(context)
         
+        hints_info = self._build_hints_info()
+
         # Build user message
         user_message = f"""用户任务：{task}
 
 {context_info}
+
+{hints_info}
 
 请生成 Playwright 代码来完成这个浏览器操作任务。"""
         logger.info(f"Browser Skill System Prompt: {self.SYSTEM_PROMPT}")
@@ -1014,6 +1027,26 @@ except Exception as e:
                 direct_response=f"错误: {str(e)}\n\n详细信息：\n{error_details}"
             )
     
+    def _build_hints_info(self) -> str:
+        """Read all markdown files from the hints folder and concatenate their content."""
+        import os
+        import glob
+        
+        hints_dir = os.path.join(os.path.dirname(__file__), "hints")
+        md_files = glob.glob(os.path.join(hints_dir, "**", "*.md"), recursive=True)
+        
+        all_content = []
+        for md_file in md_files:
+            try:
+                with open(md_file, 'r', encoding='utf-8') as f:
+                    content = f.read()
+                    if self._browser_page and self._browser_page.url in content:
+                        all_content.append(f"--- Content from {os.path.relpath(md_file, hints_dir)} ---\n{content}\n")
+            except Exception as e:
+                print(f"Warning: Could not read {md_file}: {e}")
+        
+        return "信息抽取建议：\n" + "\n".join(all_content) if all_content else ""
+
     def _build_context_info(self, context: Optional[Dict[str, Any]]) -> str:
         """Build context information string with page state feedback"""
         if not context:
