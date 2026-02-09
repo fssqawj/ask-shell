@@ -1,13 +1,15 @@
-"""Web Server for Ask-Shell UI"""
+"""Web Server for Ask-Shell UI - Enhanced Version"""
 
 import asyncio
 import json
 import threading
 import re
-from typing import Dict, List
-from flask import Flask, render_template, request, jsonify
-from flask_socketio import SocketIO, emit
 import os
+from datetime import datetime
+from typing import Dict, List, Any
+from flask import Flask, render_template, request, jsonify, send_from_directory
+from flask_socketio import SocketIO, emit
+from dataclasses import dataclass, asdict
 
 from ..agent import AskShell
 from ..ui.console import ConsoleUI
@@ -15,23 +17,167 @@ from rich.panel import Panel
 from rich.syntax import Syntax
 
 
+@dataclass
+class TaskRecord:
+    """Data class for storing task execution records"""
+    id: str
+    task: str
+    status: str
+    start_time: str
+    end_time: str
+    duration: float
+    iterations: int
+    success_count: int
+    failure_count: int
+    execution_log: List[Dict[str, Any]]
+    summary: Dict[str, Any]
+    created_at: str = None
+
+
 class WebUI:
-    """Web-based UI for Ask-Shell"""
+    """Enhanced Web-based UI for Ask-Shell with history tracking"""
     
     def __init__(self, app, socketio):
         self.app = app
         self.socketio = socketio
         self.active_sessions: Dict[str, AskShell] = {}
         self.session_outputs: Dict[str, List[str]] = {}
+        self.task_history: List[TaskRecord] = []
+        self.task_storage_path = os.path.join(os.path.dirname(__file__), 'task_history.json')
         
+        self._load_task_history()
         self._setup_routes()
         self._setup_socket_handlers()
+        
+    def _load_task_history(self):
+        """Load task history from file"""
+        try:
+            if os.path.exists(self.task_storage_path):
+                with open(self.task_storage_path, 'r', encoding='utf-8') as f:
+                    data = json.load(f)
+                    self.task_history = [TaskRecord(**record) for record in data]
+        except Exception as e:
+            print(f"Warning: Could not load task history: {e}")
+            self.task_history = []
+    
+    def _save_task_history(self):
+        """Save task history to file"""
+        try:
+            # Keep only last 100 tasks to prevent file from growing too large
+            recent_tasks = self.task_history[-100:]
+            with open(self.task_storage_path, 'w', encoding='utf-8') as f:
+                json.dump([asdict(task) for task in recent_tasks], f, ensure_ascii=False, indent=2)
+        except Exception as e:
+            print(f"Warning: Could not save task history: {e}")
+    
+    def _save_task_from_context(self, session_id: str, context, start_time=None):
+        """Save task to history from context"""
+        # Calculate duration
+        end_time = datetime.now()
+        start_time = start_time or getattr(context, 'start_time', end_time)
+        if isinstance(start_time, str):
+            # Convert ISO format string back to datetime if needed
+            try:
+                start_time = datetime.fromisoformat(start_time.replace('Z', '+00:00'))
+            except ValueError:
+                # Handle different ISO format variations
+                start_time = datetime.fromisoformat(start_time)
+        duration = (end_time - start_time).total_seconds()
+        
+        # Create task record
+        task_record = TaskRecord(
+            id=session_id,
+            task=context.task_description,
+            status=context.status.value,
+            start_time=start_time.isoformat(),
+            end_time=end_time.isoformat(),
+            duration=duration,
+            iterations=context.iteration,
+            success_count=sum(1 for r in context.history if r.success),
+            failure_count=sum(1 for r in context.history if not r.success),
+            execution_log=self.session_logs.get(session_id, []),
+            summary={
+                'iterations': context.iteration,
+                'success_count': sum(1 for r in context.history if r.success),
+                'failure_count': sum(1 for r in context.history if not r.success)
+            }
+        )
+        
+        # Add to history
+        self._add_task_record(task_record)
+        print(f"DEBUG: Task saved to history: {session_id}")
+    
+    def _add_task_record(self, task_record: TaskRecord):
+        """Add a task record to history"""
+        self.task_history.append(task_record)
+        self._save_task_history()
+        # Broadcast to all connected clients
+        self.socketio.emit('task_history_updated', {
+            'task_count': len(self.task_history)
+        })
     
     def _setup_routes(self):
         """Setup Flask routes"""
         @self.app.route('/')
         def index():
-            return render_template('index.html')
+            return render_template('index_refactored.html')
+        
+        @self.app.route('/test')
+        def test():
+            return 'Test route working!'
+        
+        
+        @self.app.route('/api/history')
+        def get_task_history():
+            """Get task history with pagination"""
+            page = int(request.args.get('page', 1))
+            per_page = int(request.args.get('per_page', 20))
+            
+            # Sort by start time descending (newest first)
+            sorted_history = sorted(self.task_history, 
+                                  key=lambda x: x.start_time, 
+                                  reverse=True)
+            
+            start_idx = (page - 1) * per_page
+            end_idx = start_idx + per_page
+            paginated_tasks = sorted_history[start_idx:end_idx]
+            
+            return jsonify({
+                'tasks': [asdict(task) for task in paginated_tasks],
+                'total': len(self.task_history),
+                'page': page,
+                'per_page': per_page,
+                'total_pages': (len(self.task_history) + per_page - 1) // per_page
+            })
+        
+        @self.app.route('/api/history/<task_id>')
+        def get_task_detail(task_id):
+            """Get detailed information for a specific task"""
+            task_record = next((task for task in self.task_history if task.id == task_id), None)
+            if not task_record:
+                return jsonify({'error': 'Task not found'}), 404
+            
+            return jsonify(asdict(task_record))
+        
+        @self.app.route('/api/history/<task_id>', methods=['DELETE'])
+        def delete_task(task_id):
+            """Delete a specific task from history"""
+            task_index = next((i for i, task in enumerate(self.task_history) if task.id == task_id), None)
+            if task_index is None:
+                return jsonify({'error': 'Task not found'}), 404
+            
+            del self.task_history[task_index]
+            self._save_task_history()
+            
+            return jsonify({'message': 'Task deleted successfully'})
+        
+        @self.app.route('/api/history/clear', methods=['POST'])
+        def clear_task_history():
+            """Clear all task history"""
+            self.task_history.clear()
+            self._save_task_history()
+            
+            return jsonify({'message': 'Task history cleared successfully'})
         
         @self.app.route('/api/run', methods=['POST'])
         def run_task():
@@ -47,11 +193,19 @@ class WebUI:
                 self.active_sessions[session_id] = AskShell(auto_execute=True)
                 self.session_outputs[session_id] = []
             
+            # Initialize execution log for this session
+            if not hasattr(self, 'session_logs'):
+                self.session_logs = {}
+            self.session_logs[session_id] = []
+            
+            # Record start time
+            start_time = datetime.now()
+            
             # Run the task in a separate thread to allow async updates
             def run_in_thread():
                 agent = self.active_sessions[session_id]
                 
-                # Override the UI to send updates via WebSocket
+                # Override the UI to send updates via WebSocket and capture logs
                 original_ui = agent.ui
                 web_ui_wrapper = self._create_web_ui_wrapper(agent.ui, session_id)
                 agent.ui = web_ui_wrapper
@@ -62,6 +216,34 @@ class WebUI:
                 
                 try:
                     context = agent.run(task)
+                    
+                    # Record end time and create task record
+                    end_time = datetime.now()
+                    duration = (end_time - start_time).total_seconds()
+                    
+                    # Create task record
+                    task_record = TaskRecord(
+                        id=session_id,
+                        task=task,
+                        status=context.status.value,
+                        start_time=start_time.isoformat(),
+                        end_time=end_time.isoformat(),
+                        duration=duration,
+                        iterations=context.iteration,
+                        success_count=sum(1 for r in context.history if r.success),
+                        failure_count=sum(1 for r in context.history if not r.success),
+                        execution_log=self.session_logs.get(session_id, []),
+                        summary={
+                            'iterations': context.iteration,
+                            'success_count': sum(1 for r in context.history if r.success),
+                            'failure_count': sum(1 for r in context.history if not r.success)
+                        },
+                        created_at=datetime.now().isoformat()
+                    )
+                    
+                    # Add to history
+                    self._add_task_record(task_record)
+                    
                     self.socketio.emit('task_complete', {
                         'session_id': session_id,
                         'status': context.status.value,
@@ -72,6 +254,27 @@ class WebUI:
                         }
                     }, room=session_id)
                 except Exception as e:
+                    # Record failed task
+                    end_time = datetime.now()
+                    duration = (end_time - start_time).total_seconds()
+                    
+                    task_record = TaskRecord(
+                        id=session_id,
+                        task=task,
+                        status='error',
+                        start_time=start_time.isoformat(),
+                        end_time=end_time.isoformat(),
+                        duration=duration,
+                        iterations=0,
+                        success_count=0,
+                        failure_count=1,
+                        execution_log=self.session_logs.get(session_id, []),
+                        summary={'error': str(e)},
+                        created_at=datetime.now().isoformat()
+                    )
+                    
+                    self._add_task_record(task_record)
+                    
                     self.socketio.emit('error', {
                         'session_id': session_id,
                         'message': str(e)
@@ -113,6 +316,15 @@ class WebUI:
                 self.active_sessions[session_id] = AskShell(auto_execute=True)
                 self.session_outputs[session_id] = []
             
+            # Initialize execution log for this session
+            if not hasattr(self, 'session_logs'):
+                self.session_logs = {}
+            if session_id not in self.session_logs:
+                self.session_logs[session_id] = []
+            
+            # Record start time for this session
+            session_start_time = datetime.now()
+            
             # Run the task in a separate thread to allow async updates
             def run_in_thread():
                 agent = self.active_sessions[session_id]
@@ -130,6 +342,11 @@ class WebUI:
                 try:
                     context = agent.run(task)
                     print(f"DEBUG: Task completed for session {session_id}")
+                    
+                    # Store context for history saving
+                    agent.last_context = context
+                    
+                    # Emit task completion event to clients
                     self.socketio.emit('task_complete', {
                         'session_id': session_id,
                         'status': context.status.value,
@@ -139,8 +356,33 @@ class WebUI:
                             'failure_count': sum(1 for r in context.history if not r.success)
                         }
                     }, room=session_id)
+                    
+                    # Save task to history
+                    self._save_task_from_context(session_id, context, session_start_time)
                 except Exception as e:
                     print(f"DEBUG: Error in agent run for session {session_id}: {e}")
+                    
+                    # Record failed task
+                    end_time = datetime.now()
+                    duration = (end_time - session_start_time).total_seconds()
+                    
+                    task_record = TaskRecord(
+                        id=session_id,
+                        task=task,
+                        status='error',
+                        start_time=session_start_time.isoformat(),
+                        end_time=end_time.isoformat(),
+                        duration=duration,
+                        iterations=0,
+                        success_count=0,
+                        failure_count=1,
+                        execution_log=self.session_logs.get(session_id, []),
+                        summary={'error': str(e)},
+                        created_at=datetime.now().isoformat()
+                    )
+                    
+                    self._add_task_record(task_record)
+                    
                     self.socketio.emit('error', {
                         'session_id': session_id,
                         'message': str(e)
@@ -190,15 +432,36 @@ class WebUI:
     def _create_web_ui_wrapper(self, console_ui: ConsoleUI, session_id: str):
         """Create a wrapper around ConsoleUI to emit events to web"""
         class WebUIWrapper:
-            def __init__(self, console_ui, session_id, socketio):
+            def __init__(self, console_ui, session_id, socketio, parent):
                 self.console_ui = console_ui
                 self.session_id = session_id
                 self.socketio = socketio
+                self.parent = parent
+                # Only capture essential execution events, not streaming updates
+                self.essential_events = {
+                    'task_received', 'step_started', 'response_generated', 
+                    'execution_result', 'task_complete', 'error', 'warning', 
+                    'info', 'skill_selected', 'task_cancelled', 'max_iterations'
+                }
             
             def _emit_event(self, event_type: str, data: dict):
-                """Emit event to the specific session"""
+                """Emit event to the specific session and capture only essential logs"""
                 # Add session info to data
                 data['session_id'] = self.session_id
+                # Add timestamp
+                data['timestamp'] = datetime.now().isoformat()
+                
+                # Only capture essential events for history (exclude streaming updates)
+                if (hasattr(self.parent, 'session_logs') and 
+                    self.session_id in self.parent.session_logs and 
+                    event_type in self.essential_events):
+                    log_entry = {
+                        'event_type': event_type,
+                        'data': data.copy(),
+                        'timestamp': data['timestamp']
+                    }
+                    self.parent.session_logs[self.session_id].append(log_entry)
+                
                 # Debug logging
                 print(f"DEBUG: Emitting event {event_type} to session {self.session_id}")
                 # Emit to the default namespace - SocketIO should broadcast to all connected clients
@@ -379,49 +642,49 @@ class WebUI:
                         if thinking_match:
                             raw_content = thinking_match.group(1)
                             self.thinking = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract error_analysis field
                         error_match = re.search(r'"error_analysis"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if error_match:
                             raw_content = error_match.group(1)
                             self.error_analysis = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract command field
                         command_match = re.search(r'"command"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if command_match:
                             raw_content = command_match.group(1)
                             self.command = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract explanation field
                         explanation_match = re.search(r'"explanation"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if explanation_match:
                             raw_content = explanation_match.group(1)
                             self.explanation = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract next_step field
                         next_step_match = re.search(r'"next_step"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if next_step_match:
                             raw_content = next_step_match.group(1)
                             self.next_step = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract direct_response field
                         direct_response_match = re.search(r'"direct_response"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if direct_response_match:
                             raw_content = direct_response_match.group(1)
                             self.direct_response = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract code field
                         code_match = re.search(r'"code"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if code_match:
                             raw_content = code_match.group(1)
                             self.code = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-                        
+                                    
                         # Extract PPT skill title field
                         title_match = re.search(r'"title"\s*:\s*"((?:[^"\\]|\\.)*)', self.buffer)
                         if title_match:
                             raw_content = title_match.group(1)
                             self.title = raw_content.replace('\\n', '\n').replace('\\"', '"').replace('\\\\', '\\')
-
+                    
                         outline_start_pos = self.buffer.find('"outline"')
                         if outline_start_pos != -1:
                             self.outline = self.buffer[outline_start_pos:]
@@ -459,7 +722,7 @@ class WebUI:
                 self._emit_event('browser_code_generation_started', {'message': 'Generating browser automation code...'})
                 return self.console_ui.browser_code_generation_animation()
         
-        return WebUIWrapper(console_ui, session_id, self.socketio)
+        return WebUIWrapper(console_ui, session_id, self.socketio, self)
 
 
 def create_app():
@@ -485,5 +748,17 @@ def run_web_server(host='localhost', port=5000, debug=False):
     socketio.run(app, host=host, port=port, debug=debug, use_reloader=False)
 
 
+def main():
+    """Main entry point"""
+    import argparse
+    parser = argparse.ArgumentParser(description='Ask-Shell Web UI')
+    parser.add_argument('--port', type=int, default=5000, help='Port to run the server on')
+    parser.add_argument('--host', default='localhost', help='Host to bind to')
+    parser.add_argument('--debug', action='store_true', help='Enable debug mode')
+    args = parser.parse_args()
+    
+    run_web_server(host=args.host, port=args.port, debug=args.debug)
+
+
 if __name__ == '__main__':
-    run_web_server(debug=True)
+    main()
