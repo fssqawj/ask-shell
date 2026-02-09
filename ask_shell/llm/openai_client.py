@@ -51,9 +51,9 @@ class OpenAIClient(BaseLLMClient):
         
         # 调用 API - 使用流式输出
         if stream_callback:
-            response_text = self._generate_with_stream(messages, stream_callback)
+            response_text = self._generate_with_stream(messages, stream_callback, response_class)
         else:
-            response_text = self._generate_without_stream(messages)
+            response_text = self._generate_without_stream(messages, response_class)
         
         # 如果指定了响应类，则直接解析并返回对象
         if response_class is not None:
@@ -78,13 +78,13 @@ class OpenAIClient(BaseLLMClient):
         # 否则返回原始的 LLMResponse
         return LLMResponse.from_json(response_text)
     
-    def _generate_with_stream(self, messages, callback: Callable[[str], None]) -> str:
+    def _generate_with_stream(self, messages, callback: Callable[[str], None], response_class) -> str:
         """使用流式输出生成响应"""
         stream = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": m.role, "content": m.content} for m in messages],
             temperature=0.1,
-            response_format={"type": "json_object"},
+            response_format={"type": "json_object"} if response_class else None,
             stream=True
         )
         
@@ -97,13 +97,13 @@ class OpenAIClient(BaseLLMClient):
         
         return full_response
     
-    def _generate_without_stream(self, messages) -> str:
+    def _generate_without_stream(self, messages, response_class) -> str:
         """不使用流式输出生成响应"""
         response = self.client.chat.completions.create(
             model=self.model,
             messages=[{"role": m.role, "content": m.content} for m in messages],
             temperature=0.1,
-            response_format={"type": "json_object"}
+            response_format={"type": "json_object"} if response_class else None
         )
         return response.choices[0].message.content
     

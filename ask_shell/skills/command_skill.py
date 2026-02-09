@@ -2,6 +2,8 @@
 
 import json
 from typing import List, Optional, Dict, Any, Callable
+
+from loguru import logger
 from .base_skill import BaseSkill, SkillExecutionResponse
 from ..llm.base import BaseLLMClient
 from ..llm.openai_client import OpenAIClient
@@ -117,6 +119,7 @@ class CommandSkill(BaseSkill):
             # Add hints to user prompt if available
             if hints_info:
                 user_prompt = f"{user_prompt}\n\n{hints_info}"
+            logger.info(f"Command Skill LLM USER Prompt: {user_prompt}")
             llm_response = self.llm.generate(self.SYSTEM_PROMPT, user_prompt, stream_callback, response_class=CommandSkillResponse)
             
             return SkillExecutionResponse(

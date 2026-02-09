@@ -102,7 +102,13 @@ class BaseSkill(ABC):
             skill_name = self.__class__.__name__
             
             # Load hints for this skill
-            hints = self.auto_hint_system.get_hints_for_skill(skill_name, max_hints=3)
+            skill_hints = self.auto_hint_system.get_hints_for_skill(skill_name, max_hints=2)
+            
+            # Load general hints (cross-skill patterns)
+            general_hints = self.auto_hint_system.get_hints_for_skill("general", max_hints=1)
+            
+            # Combine both types of hints
+            hints = skill_hints + general_hints
             
             if not hints:
                 return ""

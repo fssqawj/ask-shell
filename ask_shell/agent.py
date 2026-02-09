@@ -1,13 +1,13 @@
 """Ask-Shell 核心逻辑"""
 
 from typing import Optional
+from loguru import logger
 
 from .models.types import TaskStatus, ExecutionResult
 from .executor.shell import ShellExecutor
 from .ui.console import ConsoleUI
 from .skills import SkillManager
 from .context.task_context import TaskContext
-
 
 class AskShell:
     """
@@ -135,6 +135,7 @@ class AskShell:
                 context.status = TaskStatus.COMPLETED
                 self.ui.print_complete()
                 self.skill_manager.reset_all()
+                self._trigger_auto_hint_learning(context, task)
                 break
             
             # 如果没有命令，跳过
@@ -271,7 +272,6 @@ class AskShell:
                 )
                 logger.info("Auto hint learning triggered after task completion")
             else:
-                logger.debug("Insufficient execution history for hint learning")
-                
+                logger.info("Insufficient execution history for hint learning")
         except Exception as e:
             logger.warning(f"Failed to trigger auto hint learning: {e}")

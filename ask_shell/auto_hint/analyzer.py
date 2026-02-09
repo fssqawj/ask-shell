@@ -16,8 +16,8 @@ class ExecutionResultAnalyzer:
     """
     
     def __init__(self):
-        self.min_frequency_threshold = 2  # Minimum frequency to consider a pattern
-        self.min_confidence_threshold = 0.7  # Minimum confidence for pattern extraction
+        self.min_frequency_threshold = 3 # Minimum frequency to consider a pattern
+        self.min_confidence_threshold = 0.8  # Minimum confidence for pattern extraction
         self.success_rate_threshold = 0.8  # Threshold for successful patterns
     
     def analyze_history(self, history: List[ExecutionResult], skills) -> ExecutionAnalysisResult:

@@ -103,6 +103,7 @@ class HintPersistenceManager:
         Returns:
             bool: True if saved successfully
         """
+        logger.info(f"Saving hint: {hint_data}")
         try:
             metadata = hint_data.get("metadata")
             if not metadata:

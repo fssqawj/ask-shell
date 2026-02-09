@@ -43,8 +43,8 @@ class AutoHintSystem:
             self.persistence = None
         
         # Configuration
-        self.min_history_length = 3  # Minimum execution history length to trigger analysis
-        self.analysis_interval = 5   # Analyze every N task completions
+        self.min_history_length = 5  # Minimum execution history length to trigger analysis
+        self.analysis_interval = 1  # Analyze every N task completions
         self.task_completion_count = 0
         self._lock = threading.Lock()
         

@@ -100,13 +100,12 @@ class SkillSelector:
             confidence = float(response.get("confidence", 0.8))
             reasoning = response.get("reasoning", "LLM选择的技能")
             task_complete = bool(response.get("task_complete", False))
-            
-            # Find the skill object
-            selected_skill = self._find_skill_by_name(available_skills, selected_skill_name)
-            
-            # If task is marked as complete, return None for skill
+
             if task_complete:
                 return None, confidence, reasoning, True
+
+            # Find the skill object
+            selected_skill = self._find_skill_by_name(available_skills, selected_skill_name)
             
             if selected_skill is None:
                 # Fallback to first skill (should be default CommandSkill)

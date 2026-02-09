@@ -404,10 +404,22 @@ class HintGenerator:
         
         avg_success_rate = weighted_success_rate / total_frequency if total_frequency > 0 else 0
         
+        # Handle multi-skill patterns
+        combined_skill_name = base_pattern.skill_name
+        if ',' in base_pattern.skill_name:
+            # For multi-skill patterns, use "general" as the skill name
+            # but preserve the original skill names in the description
+            combined_skill_name = "general"
+            original_description = base_pattern.pattern_description
+            skill_names = base_pattern.skill_name.split(',')
+            pattern_description = f"Multi-skill pattern ({', '.join(skill_names)}) from {len(patterns)} similar executions"
+        else:
+            pattern_description = f"Combined pattern from {len(patterns)} similar executions"
+        
         return HintPattern(
             category=base_pattern.category,
-            skill_name=base_pattern.skill_name,
-            pattern_description=f"Combined pattern from {len(patterns)} similar executions",
+            skill_name=combined_skill_name,
+            pattern_description=pattern_description,
             context_keywords=base_pattern.context_keywords,
             success_rate=avg_success_rate,
             frequency=total_frequency,
